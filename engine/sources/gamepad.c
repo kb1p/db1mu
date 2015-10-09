@@ -1,5 +1,5 @@
 #include "gamepad.h"
-
+/*
 static c6502_byte_t psg[...];
 
 static int joy_1, joy_readbit;
@@ -20,3 +20,4 @@ void gp_write_joy1(c6502_byte_t v)
     }
     psg[0x16] = v;
 }
+*/

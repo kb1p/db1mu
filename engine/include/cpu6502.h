@@ -167,11 +167,12 @@ typedef enum
 #define TXA     0x8A
 #define TXS     0x9A
 #define TYA     0x98
+#define OPCODE_COUNT 0xFFu
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 void c6502_set_mode(c6502_mode_t cm);
 c6502_byte_t c6502_memory_read(c6502_word_t addr);
 void c6502_memory_write(c6502_word_t addr, c6502_byte_t val);

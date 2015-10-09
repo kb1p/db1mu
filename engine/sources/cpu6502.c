@@ -5,6 +5,7 @@
  */
 
 #include "cpu6502.h"
+#include <stddef.h>
 
 /* Layout:
  * - accumulator
@@ -45,6 +46,15 @@ static c6502_byte_t wram[0x2000];
 // Basic addressed are 0x8000 ~ 0xFFFF; addresses 0x8000 ~ 0xC000 are a switchable banks
 static c6502_byte_t rom[128][0x2000];
 
+
+// Push to / pop from the stack shorthands
+#define PUSH(v) c6502_memory_write(0x100 | cpu_regs.s--, (v))
+
+#define POP c6502_memory_read(0x100 | (++cpu_regs.s))
+
+// Get the byte PC points to and advance PC
+#define PCADV c6502_memory_read(cpu_regs.pc.W++)
+
 // Num. cycles per 6502 instruction
 static const c6502_byte_t cycles[256] =
 {
@@ -66,6 +76,23 @@ static const c6502_byte_t cycles[256] =
     /*0xF0*/ 2,5,2,8,4,4,6,6,2,4,2,7,4,4,7,7,
 };
 
+/*** OPCODE HANDLING SECTION ***/
+// Opcode handler function type
+typedef void (*OpHandler)(void);
+
+#define OPHDEF(NAME) void NAME(void);
+
+OPHDEF(op_nop)
+OPHDEF(op_brk)
+
+// Opcode handlers table
+static OpHandler opcode_handlers[OPCODE_COUNT] = {
+    NULL,
+    [NOP] = &op_nop,
+    [BRK] = &op_brk
+};
+
+/*** CPU emulator service routines ***/
 void c6502_set_mode(c6502_mode_t cm)
 {
     cpu_mode = cm;
@@ -132,12 +159,9 @@ void c6502_reset()
 // Handle non-maskable interrupt
 void c6502_nmi()
 {
-    c6502_memory_write(0x100 | cpu_regs.s, cpu_regs.pc.B.h);
-    cpu_regs.s--;
-    c6502_memory_write(0x100 | cpu_regs.s, cpu_regs.pc.B.l);
-    cpu_regs.s--;
-    c6502_memory_write(0x100 | cpu_regs.s, cpu_regs.p);
-    cpu_regs.s--;
+    PUSH(cpu_regs.pc.B.h);
+    PUSH(cpu_regs.pc.B.l);
+    PUSH(cpu_regs.p);
     
     cpu_regs.pc.B.l = c6502_memory_read(0xFFFA);
     cpu_regs.pc.B.h = c6502_memory_read(0xFFFB);
@@ -169,19 +193,41 @@ void c6502_run()
 
 c6502_byte_t c6502_step()
 {
-    c6502_byte_t opcode = c6502_memory_read(cpu_regs.pc.W++);
-    
-    // Emulate all opcodes
-    switch (opcode)
+    c6502_byte_t opcode = PCADV;
+
+    OpHandler oph = opcode_handlers[opcode];
+    if (oph)
     {
-        #include "opjob.inc"
-        default:
-            cpu_state = STATE_ERROR;
-
-            // TODO: add error handling
-            return 0;
+        oph();
+        return cycles[opcode];
     }
+    else
+    {
+        cpu_state = STATE_ERROR;
 
-    return cycles[opcode];
+        // TODO: add error handling
+        return 0;
+    }
 }
 
+/*
+ * 6502 OPCODE IMPLEMENTATION
+ */
+void op_nop()
+{
+}
+
+void op_brk()
+{
+    /*
+     *   cpu_regs.pc.W++;
+     *   PUSH(cpu_regs.pc.W >> 8);
+     *   PUSH(_PC);
+     *   PUSH(_P|U_FLAG|B_FLAG);
+     * 
+     *   _P|=I_FLAG;
+     *   _PI|=I_FLAG;
+     *   _PC=RdMem(0xFFFE);
+     *   _PC|=RdMem(0xFFFF)<<8;
+     */
+}
