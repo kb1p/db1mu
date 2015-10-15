@@ -3,18 +3,6 @@
 
 #include "common.h"
 
-typedef enum
-{
-    PAL = 0, NTSC
-} c6502_mode_t;
-
-typedef enum
-{
-    STATE_HALTED, 
-    STATE_RUN, 
-    STATE_ERROR
-} c6502_state_t;
-
 // 6502 opcodes
 #define ADC_IMM 0x69
 #define ADC_ZP  0x65
@@ -169,27 +157,102 @@ typedef enum
 #define TYA     0x98
 #define OPCODE_COUNT 0xFFu
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+class CPU6502
+{
+public:
+    enum Mode
+    {
+        PAL = 0, NTSC
+    };
 
-void c6502_set_mode(c6502_mode_t cm);
-c6502_byte_t c6502_memory_read(c6502_word_t addr);
-void c6502_memory_write(c6502_word_t addr, c6502_byte_t val);
-c6502_byte_t c6502_io_read(c6502_word_t addr);
-void c6502_io_write(c6502_word_t addr, c6502_byte_t val);
-c6502_byte_t c6502_mmc_read(c6502_word_t addr);
-void c6502_mmc_write(c6502_word_t addr, c6502_byte_t val);
-void c6502_update_screen();
-void c6502_test_keys();
-void c6502_nmi();
-void c6502_irq();
-c6502_byte_t c6502_step();
-void c6502_reset();
-void c6502_run();
+    enum RunState
+    {
+        STATE_HALTED,
+        STATE_RUN,
+        STATE_ERROR
+    };
 
-#ifdef __cplusplus
-}
-#endif
+    // CPU state which can be shared with non-members
+    struct State
+    {
+        /* Layout:
+         * - accumulator
+         * - flags
+         * - X, Y indexes
+         * - stack pointer
+         * - program counter
+         */
+        struct Reg
+        {
+            c6502_byte_t a, p, x, y, s;
+            union
+            {
+                struct
+                {
+                    c6502_byte_t l, h;
+                } B;
+                c6502_word_t W;
+            } pc;
+        } regs;
+
+        /*** 6502 MEMORY MAP ***/
+        // Internal RAM: 0x0000 ~ 0x2000.
+        // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
+        c6502_byte_t ram[0x800];
+
+        // Cartridge RAM: 0x6000 ~ 0x8000
+        c6502_byte_t wram[0x2000];
+
+        // Catridge ROM may contain from 32 to 256kb of 2kb-sized pages
+        // Basic addressed are 0x8000 ~ 0xFFFF; addresses 0x8000 ~ 0xC000 are a switchable banks
+        c6502_byte_t rom[128][0x2000];
+    };
+
+    CPU6502(Mode mode);
+    void Clock();
+    void reset();
+
+private:
+    typedef void (*OpHandler)(State*);
+
+    // Opcode handlers table
+    static OpHandler m_ophandlers[OPCODE_COUNT];
+
+    State m_s;
+
+    Mode m_mode;
+    RunState m_rstate;
+    int m_period;
+
+    c6502_byte_t readMem(c6502_word_t addr);
+    void writeMem(c6502_word_t addr, c6502_byte_t val);
+    c6502_byte_t readIO(c6502_word_t addr);
+    void writeIO(c6502_word_t addr, c6502_byte_t val);
+    c6502_byte_t readMMC(c6502_word_t addr);
+    void writeMMC(c6502_word_t addr, c6502_byte_t val);
+    void updateScreen();
+    void testKeys();
+    void IRQ();
+    void NMI();
+    c6502_byte_t step();
+
+    // Helpers
+    // Push to / pop from the stack shorthands
+    inline void push(c6502_byte_t v)
+    {
+        writeMem(0x100 | m_s.regs.s--, v);
+    }
+
+    inline c6502_byte_t pop()
+    {
+        return readMem(0x100 | (++m_s.regs.s));
+    }
+
+    // Get the byte PC points to and advance PC
+    inline c6502_byte_t advance()
+    {
+        return readMem(m_s.regs.pc.W++);
+    }
+};
 
 #endif

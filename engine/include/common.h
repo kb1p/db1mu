@@ -9,12 +9,4 @@
 typedef uint8_t c6502_byte_t;
 typedef uint16_t c6502_word_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
 #endif
