@@ -2,6 +2,7 @@
 #define CPU6502_H
 
 #include "common.h"
+#include "storage.h"
 
 // 6502 opcodes
 #define ADC_IMM 0x69
@@ -157,6 +158,9 @@
 #define TYA     0x98
 #define OPCODE_COUNT 0xFFu
 
+struct Cartrige;
+struct PPU;
+
 class CPU6502
 {
 public:
@@ -198,17 +202,11 @@ public:
         /*** 6502 MEMORY MAP ***/
         // Internal RAM: 0x0000 ~ 0x2000.
         // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
-        c6502_byte_t ram[0x800];
-
-        // Cartridge RAM: 0x6000 ~ 0x8000
-        c6502_byte_t wram[0x2000];
-
-        // Catridge ROM may contain from 32 to 256kb of 2kb-sized pages
-        // Basic addressed are 0x8000 ~ 0xFFFF; addresses 0x8000 ~ 0xC000 are a switchable banks
-        c6502_byte_t rom[128][0x2000];
+        Storage<0x800> ram;
     };
 
     CPU6502(Mode mode);
+    void InjectCartrige(Cartrige*);
     void Clock();
     void reset();
 
@@ -223,6 +221,8 @@ private:
     Mode m_mode;
     RunState m_rstate;
     int m_period;
+    Cartrige* m_activeCartrige;
+    PPU* m_ppu;
 
     c6502_byte_t readMem(c6502_word_t addr);
     void writeMem(c6502_word_t addr, c6502_byte_t val);

@@ -5,6 +5,8 @@
  */
 
 #include "cpu6502.h"
+#include "Cartridge.h"
+#include "PPU.h"
 #include <stddef.h>
 
 // Tacts per period: { PAL, NTSC }
@@ -55,10 +57,11 @@ void op_brk(CPU6502::State *s)
 }
 
 /*** CPU class implementation ***/
-CPU6502::CPU6502(Mode mode):
-    m_mode(mode),
-    m_rstate(STATE_HALTED),
-    m_period(0)
+CPU6502::CPU6502(Mode mode)
+: m_mode(mode)
+, m_rstate(STATE_HALTED)
+, m_period(0)
+, m_activeCartrige(0)
 {
     for (int i = 0; i < OPCODE_COUNT; i++)
         m_ophandlers[i] = nullptr;
@@ -78,15 +81,18 @@ c6502_byte_t CPU6502::readMem(c6502_word_t addr)
     switch (addr >> 13)
     {
         case 0:
-            return m_s.ram[addr & 0x7FF];
-        case 3:
-            return m_s.wram[addr & 0x1FFF];
+            return m_s.ram.Read(addr & 0x7FF);
         case 1:
         case 2:
             return readIO(addr);
-        default:
-            addr &= 0x7FFF;
-            return m_s.rom[addr >> 13][addr];
+        case 3:
+            return m_activeCartrige->wram.Read(addr & 0x1FFF);
+        case 4:
+        case 5:
+            return m_activeCartrige->rom[0].Read(addr & 0x1FFF);
+        case 6:
+        case 7:
+            return m_activeCartrige->rom[1].Read(addr & 0x1FFF);
     }
 }
 
@@ -96,16 +102,17 @@ void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
     {
         case 0:
             // To internal RAM
-            m_s.ram[addr & 0x7FF] = val;
-            break;
-        case 3:
-            // To cartridge RAM
-            m_s.wram[addr & 0x1FFF] = val;
+            m_s.ram.Write(addr & 0x7FF, val);
             break;
         case 1:
+            m_ppu->GetRegisters().Write(addr & 0x1F, val);
         case 2:
             // To GPU or APU registers
             writeIO(addr, val);
+            break;
+        case 3:
+            // To cartridge RAM
+            m_activeCartrige->wram.Write(addr & 0x1FFF, val);
             break;
         default:
             // Write to registers of memory controller on cartridge
@@ -150,6 +157,13 @@ void CPU6502::NMI()
 
     m_period -= 7;
 }
+
+void CPU6502::InjectCartrige(Cartrige* cartridge)
+{
+    m_activeCartrige = cartridge;
+    reset();
+}
+
 
 void CPU6502::Clock()
 {
