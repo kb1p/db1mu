@@ -1,10 +1,14 @@
 /*
  * 6502 CPU emulation routines.
  *
+ * This file contains only basic CPU routines; opcode implementations
+ * are located in a separate module "opcodes.cpp".
+ *
  * TODO: replace all these magic numbers with #defines at least.
  */
 
 #include "cpu6502.h"
+#include "opcodes.h"
 #include "Cartridge.h"
 #include "PPU.h"
 #include <stddef.h>
@@ -33,46 +37,31 @@ static const c6502_byte_t CYCLES[256] =
     /*0xF0*/ 2,5,2,8,4,4,6,6,2,4,2,7,4,4,7,7,
 };
 
-/*
- * 6502 OPCODE IMPLEMENTATION
- */
-void op_nop(CPU6502::State*)
-{
-    // just eat the tacts
-}
-
-void op_brk(CPU6502::State *s)
-{
-    /*
-     *   cpu_regs.pc.W++;
-     *   PUSH(cpu_regs.pc.W >> 8);
-     *   PUSH(_PC);
-     *   PUSH(_P|U_FLAG|B_FLAG);
-     * 
-     *   _P|=I_FLAG;
-     *   _PI|=I_FLAG;
-     *   _PC=RdMem(0xFFFE);
-     *   _PC|=RdMem(0xFFFF)<<8;
-     */
-}
+CPU6502::OpHandler CPU6502::s_ophandlers[OPCODE_COUNT];
 
 /*** CPU class implementation ***/
 CPU6502::CPU6502(Mode mode)
-: m_mode(mode)
-, m_rstate(STATE_HALTED)
-, m_period(0)
-, m_activeCartrige(0)
+    : m_mode(mode)
+    , m_state(STATE_HALTED)
+    , m_period(0)
+    , m_activeCartrige(0)
 {
-    for (int i = 0; i < OPCODE_COUNT; i++)
-        m_ophandlers[i] = nullptr;
+    // Static initializer
+    static bool staticInitComplete = false;
 
-#define ASSIGN(opcode, name) m_ophandlers[(opcode)] = &(name);
+    if (!staticInitComplete)
+    {
+        for (int i = 0; i < OPCODE_COUNT; i++)
+            s_ophandlers[i] = nullptr;
 
-    // Initialize opcode handler table
-    ASSIGN(NOP, op_nop)
-    ASSIGN(BRK, op_brk)
+        // handler_array[opcode] = &opcode_handler_function
+        #define OPASGN(code) s_ophandlers[code] = &CPU6502::op_##code;
 
-#undef ASSIGN
+        // assign handlers for all opcodes
+        FOR_EACH_OPCODE(OPASGN)
+
+        staticInitComplete = true;
+    }
 }
 
 
@@ -81,7 +70,7 @@ c6502_byte_t CPU6502::readMem(c6502_word_t addr)
     switch (addr >> 13)
     {
         case 0:
-            return m_s.ram.Read(addr & 0x7FF);
+            return m_ram.Read(addr & 0x7FF);
         case 1:
         case 2:
             return readIO(addr);
@@ -102,7 +91,7 @@ void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
     {
         case 0:
             // To internal RAM
-            m_s.ram.Write(addr & 0x7FF, val);
+            m_ram.Write(addr & 0x7FF, val);
             break;
         case 1:
             m_ppu->GetRegisters().Write(addr & 0x1F, val);
@@ -130,13 +119,13 @@ void CPU6502::testKeys()
 
 void CPU6502::reset()
 {
-    m_s.regs.a = m_s.regs.x = m_s.regs.y = 0;
-    m_s.regs.p = 0x22;
-    m_s.regs.s = 0xFF;
-    m_s.regs.pc.B.l = readMem(0xFFFC);
-    m_s.regs.pc.B.h = readMem(0xFFFD);
+    m_regs.a = m_regs.x = m_regs.y = 0;
+    m_regs.p = 0x22;
+    m_regs.s = 0xFF;
+    m_regs.pc.B.l = readMem(0xFFFC);
+    m_regs.pc.B.h = readMem(0xFFFD);
     m_period = TPP[m_mode];
-    m_rstate = STATE_RUN;
+    m_state = STATE_RUN;
 }
 
 // Handle maskable interrupt
@@ -148,12 +137,12 @@ void CPU6502::IRQ()
 // Handle non-maskable interrupt
 void CPU6502::NMI()
 {
-    push(m_s.regs.pc.B.h);
-    push(m_s.regs.pc.B.l);
-    push(m_s.regs.p);
+    push(m_regs.pc.B.h);
+    push(m_regs.pc.B.l);
+    push(m_regs.p);
 
-    m_s.regs.pc.B.l = readMem(0xFFFA);
-    m_s.regs.pc.B.h = readMem(0xFFFB);
+    m_regs.pc.B.l = readMem(0xFFFA);
+    m_regs.pc.B.h = readMem(0xFFFB);
 
     m_period -= 7;
 }
@@ -167,7 +156,7 @@ void CPU6502::InjectCartrige(Cartrige* cartridge)
 
 void CPU6502::Clock()
 {
-    if (m_rstate == STATE_RUN)
+    if (m_state == STATE_RUN)
     {
         m_period -= step();
         if (m_period <= 0)
@@ -188,15 +177,15 @@ c6502_byte_t CPU6502::step()
 {
     c6502_byte_t opcode = advance();
 
-    OpHandler oph = m_ophandlers[opcode];
+    OpHandler oph = s_ophandlers[opcode];
     if (oph)
     {
-        oph(&m_s);
+        (this->*oph)();
         return CYCLES[opcode];
     }
     else
     {
-        m_rstate = STATE_ERROR;
+        m_state = STATE_ERROR;
 
         // TODO: add error handling
         return 0;
