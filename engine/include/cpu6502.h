@@ -43,7 +43,22 @@ private:
      */
     struct Reg
     {
-        c6502_byte_t a, p, x, y, s;
+        c6502_byte_t a, x, y, s;
+        union
+        {
+            struct
+            {
+                unsigned C: 1;
+                unsigned Z: 1;
+                unsigned I: 1;
+                unsigned D: 1;
+                unsigned B: 1;
+                unsigned  : 1;
+                unsigned V: 1;
+                unsigned N: 1;
+            } pbit;
+            c6502_byte_t p;
+        };
         union
         {
             struct
@@ -89,10 +104,65 @@ private:
         return readMem(0x100 | (++m_regs.s));
     }
 
-    // Get the byte PC points to and advance PC
+    // Get the byte PC points to and increase PC by 1
     inline c6502_byte_t advance()
     {
         return readMem(m_regs.pc.W++);
+    }
+
+    /*** Operand fetching routines ***/
+    inline c6502_byte_t fetchImm()
+    {
+        return readMem(m_regs.pc.W++);
+    }
+
+    inline c6502_byte_t fetchZP()
+    {
+        const c6502_word_t addr = readMem(m_regs.pc.W++);
+        return readMem(addr);
+    }
+
+    inline c6502_byte_t fetchZPX()
+    {
+        const c6502_word_t addr = readMem(m_regs.pc.W++) + m_regs.x;
+        return readMem(addr > 0xFFu ? 0 : addr);
+    }
+
+    inline c6502_byte_t fetchABS()
+    {
+        const c6502_word_t al = readMem(m_regs.pc.W++),
+                           ah = readMem(m_regs.pc.W++);
+        return readMem(al | (ah << 8));
+    }
+
+    inline c6502_byte_t fetchABX()
+    {
+        const c6502_word_t al = readMem(m_regs.pc.W++),
+                           ah = readMem(m_regs.pc.W++);
+        return readMem((al | (ah << 8)) + m_regs.x);
+    }
+
+    inline c6502_byte_t fetchABY()
+    {
+        const c6502_word_t al = readMem(m_regs.pc.W++),
+                           ah = readMem(m_regs.pc.W++);
+        return readMem((al | (ah << 8)) + m_regs.y);
+    }
+
+    inline c6502_byte_t fetchINX()
+    {
+        const c6502_word_t baddr = (readMem(m_regs.pc.W++) + m_regs.x) & 0xFFu,
+                           laddr = readMem(baddr),
+                           haddr = readMem((baddr + 1) & 0xFFu);
+        return readMem(laddr | (haddr << 8));
+    }
+
+    inline c6502_byte_t fetchINY()
+    {
+        const c6502_d_word_t baddr = readMem(m_regs.pc.W++),
+                             laddr = readMem(baddr),
+                             haddr = readMem((baddr + 1) & 0xFFu);
+        return readMem((laddr | (haddr << 8)) + m_regs.y);
     }
 
     // opcode -> unified handler prototype

@@ -1,26 +1,115 @@
 #include "cpu6502.h"
 
+#define HI(x) (((x) >> 8) & 0xFFu)
+#define LO(x) ((x) & 0xFFu)
+
 void CPU6502::op_NOP()
 {
     // Nothing to do, just waste tacts
 }
 
+// Immediate operand (follows opcode in memory)
 void CPU6502::op_ADC_IMM()
 {
-    // c6502_byte_t imm = readMem(...);
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchImm();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
 }
 
+// Zero-page addressing (byte-size address)
 void CPU6502::op_ADC_ZP()
 {
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchZP();
 
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
 }
 
-void CPU6502::op_ADC_ZPX() { }
-void CPU6502::op_ADC_ABS() { }
-void CPU6502::op_ADC_ABX() { }
-void CPU6502::op_ADC_ABY() { }
-void CPU6502::op_ADC_INX() { }
-void CPU6502::op_ADC_INY() { }
+// Zero-page indexed by X register
+void CPU6502::op_ADC_ZPX()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchZPX();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
+// Absolute addressing (word-size address)
+void CPU6502::op_ADC_ABS()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchABS();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
+// Absolute indexed by X register
+void CPU6502::op_ADC_ABX()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchABX();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
+// Absolute indexed by Y register
+void CPU6502::op_ADC_ABY()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchABY();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
+void CPU6502::op_ADC_INX()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchINX();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
+void CPU6502::op_ADC_INY()
+{
+    const c6502_word_t r = m_regs.a + m_regs.pbit.C + fetchINY();
+
+    m_regs.pbit.C = HI(r);
+    m_regs.pbit.Z = r == 0;
+    m_regs.pbit.N = (r >> 7) & 1;
+    m_regs.pbit.V = (r & 0x80u) != (m_regs.a & 0x80u);
+
+    m_regs.a = LO(r);
+}
+
 void CPU6502::op_AND_IMM() { }
 void CPU6502::op_AND_ZP() { }
 void CPU6502::op_AND_ZPX() { }
