@@ -43,7 +43,23 @@ private:
      */
     struct Reg
     {
-        c6502_byte_t a, p, x, y, s;
+        c6502_byte_t a, x, y, s;
+        
+        union
+        {
+            c6502_byte_t reg;
+            struct 
+            {
+                c6502_byte_t c:1;
+                c6502_byte_t z:1;
+                c6502_byte_t i:1;
+                c6502_byte_t d:1;
+                c6502_byte_t b:1;
+                c6502_byte_t unused:1;
+                c6502_byte_t v:1;
+                c6502_byte_t n:1;
+            } flags;
+        } p;
         union
         {
             struct

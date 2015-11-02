@@ -117,10 +117,27 @@ void CPU6502::op_ORA_ABX() { }
 void CPU6502::op_ORA_ABY() { }
 void CPU6502::op_ORA_INX() { }
 void CPU6502::op_ORA_INY() { }
-void CPU6502::op_PHA() { }
-void CPU6502::op_PHP() { }
-void CPU6502::op_PLA() { }
-void CPU6502::op_PLP() { }
+
+void CPU6502::op_PHA()
+{
+   push(m_regs.a);
+}
+
+void CPU6502::op_PHP()
+{
+    push(m_regs.p.reg);
+}
+void CPU6502::op_PLA()
+{
+    m_regs.a = pop();
+    m_regs.p.flags.z = (!m_regs.a);
+    m_regs.p.flags.n = (m_regs.a >> 7);
+}
+
+void CPU6502::op_PLP()
+{
+    m_regs.p.reg = pop();
+}
 void CPU6502::op_ROL_ACC() { }
 void CPU6502::op_ROL_ZP() { }
 void CPU6502::op_ROL_ZPX() { }
