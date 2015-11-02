@@ -44,11 +44,11 @@ private:
     struct Reg
     {
         c6502_byte_t a, x, y, s;
-        
+
         union
         {
             c6502_byte_t reg;
-            struct 
+            struct
             {
                 c6502_byte_t c:1;
                 c6502_byte_t z:1;

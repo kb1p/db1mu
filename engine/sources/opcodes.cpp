@@ -45,10 +45,22 @@ void CPU6502::op_BPL() { }
 void CPU6502::op_BRK() { }
 void CPU6502::op_BVC() { }
 void CPU6502::op_BVS() { }
-void CPU6502::op_CLC() { }
-void CPU6502::op_CLD() { }
-void CPU6502::op_CLI() { }
-void CPU6502::op_CLV() { }
+void CPU6502::op_CLC()
+{
+    m_regs.p.flags.c = 0;
+}
+void CPU6502::op_CLD()
+{
+    m_regs.p.flags.d = 0;
+}
+void CPU6502::op_CLI()
+{
+    m_regs.p.flags.i = 0;
+}
+void CPU6502::op_CLV()
+{
+    m_regs.p.flags.v = 0;
+}
 void CPU6502::op_CMP_IMM() { }
 void CPU6502::op_CMP_ZP() { }
 void CPU6502::op_CMP_ZPX() { }
@@ -148,7 +160,12 @@ void CPU6502::op_ROR_ZP() { }
 void CPU6502::op_ROR_ZPX() { }
 void CPU6502::op_ROR_ABS() { }
 void CPU6502::op_ROR_ABX() { }
-void CPU6502::op_RTI() { }
+void CPU6502::op_RTI()
+{
+    m_regs.p.reg = pop();
+    m_regs.pc.B.l = pop();
+    m_regs.pc.B.h = pop();
+}
 void CPU6502::op_RTS() { }
 void CPU6502::op_SBC_IMM() { }
 void CPU6502::op_SBC_ZP() { }
@@ -158,9 +175,19 @@ void CPU6502::op_SBC_ABX() { }
 void CPU6502::op_SBC_ABY() { }
 void CPU6502::op_SBC_INX() { }
 void CPU6502::op_SBC_INY() { }
-void CPU6502::op_SEC() { }
-void CPU6502::op_SED() { }
-void CPU6502::op_SEI() { }
+void CPU6502::op_SEC()
+{
+    m_regs.p.flags.c = 1;
+}
+
+void CPU6502::op_SED()
+{
+    m_regs.p.flags.d = 1;
+}
+void CPU6502::op_SEI()
+{
+    m_regs.p.flags.i = 1;
+}
 void CPU6502::op_STA_ZP() { }
 void CPU6502::op_STA_ZPX() { }
 void CPU6502::op_STA_ABS() { }
