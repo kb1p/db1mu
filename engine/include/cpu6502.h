@@ -44,21 +44,22 @@ private:
     struct Reg
     {
         c6502_byte_t a, x, y, s;
+
         union
         {
+            c6502_byte_t reg;
             struct
             {
-                unsigned C: 1;
-                unsigned Z: 1;
-                unsigned I: 1;
-                unsigned D: 1;
-                unsigned B: 1;
-                unsigned  : 1;
-                unsigned V: 1;
-                unsigned N: 1;
-            } pbit;
-            c6502_byte_t p;
-        };
+                c6502_byte_t c:1;
+                c6502_byte_t z:1;
+                c6502_byte_t i:1;
+                c6502_byte_t d:1;
+                c6502_byte_t b:1;
+                c6502_byte_t unused:1;
+                c6502_byte_t v:1;
+                c6502_byte_t n:1;
+            } flags;
+        } p;
         union
         {
             struct

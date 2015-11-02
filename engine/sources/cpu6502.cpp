@@ -120,7 +120,7 @@ void CPU6502::testKeys()
 void CPU6502::reset()
 {
     m_regs.a = m_regs.x = m_regs.y = 0;
-    m_regs.p = 0x22;
+    m_regs.p.reg = 0x22;
     m_regs.s = 0xFF;
     m_regs.pc.B.l = readMem(0xFFFC);
     m_regs.pc.B.h = readMem(0xFFFD);
@@ -139,7 +139,7 @@ void CPU6502::NMI()
 {
     push(m_regs.pc.B.h);
     push(m_regs.pc.B.l);
-    push(m_regs.p);
+    push(m_regs.p.reg);
 
     m_regs.pc.B.l = readMem(0xFFFA);
     m_regs.pc.B.h = readMem(0xFFFB);
