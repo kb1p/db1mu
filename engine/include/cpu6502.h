@@ -166,6 +166,20 @@ private:
         return readMem((laddr | (haddr << 8)) + m_regs.y);
     }
 
+    inline void branchIF(bool expression)
+    {
+        if (expression)
+        {
+            --m_period;
+            c6502_byte_t oldPC_h = (m_regs.pc.W - 1) >> 8;
+            m_regs.pc.W += fetchImm();
+            if (oldPC_h != m_regs.pc.B.h)
+                --m_period;
+        }
+        else
+            ++m_regs.pc.W;
+    }
+
     // opcode -> unified handler prototype
     #define OPDECL(code) void op_##code();
 

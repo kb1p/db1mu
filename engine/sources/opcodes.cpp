@@ -140,14 +140,32 @@ void CPU6502::op_ASL_ZP() { }
 void CPU6502::op_ASL_ZPX() { }
 void CPU6502::op_ASL_ABS() { }
 void CPU6502::op_ASL_ABX() { }
-void CPU6502::op_BCC() { }
-void CPU6502::op_BCS() { }
-void CPU6502::op_BEQ() { }
+void CPU6502::op_BCC()
+{
+    branchIF(! m_regs.p.flags.c);
+}
+void CPU6502::op_BCS()
+{
+    branchIF(m_regs.p.flags.c);
+}
+void CPU6502::op_BEQ()
+{
+    branchIF(m_regs.p.flags.z);
+}
 void CPU6502::op_BIT_ZP() { }
 void CPU6502::op_BIT_ABS() { }
-void CPU6502::op_BMI() { }
-void CPU6502::op_BNE() { }
-void CPU6502::op_BPL() { }
+void CPU6502::op_BMI()
+{
+    branchIF(m_regs.p.flags.n);
+}
+void CPU6502::op_BNE()
+{
+    branchIF(! m_regs.p.flags.z);
+}
+void CPU6502::op_BPL()
+{
+    branchIF(! m_regs.p.flags.n);
+}
 void CPU6502::op_BRK()
 {
     push(m_regs.pc.B.h);
@@ -158,8 +176,14 @@ void CPU6502::op_BRK()
     m_regs.pc.B.l = readMem(0xFFFE);
     m_regs.pc.B.h = readMem(0xFFFF);
 }
-void CPU6502::op_BVC() { }
-void CPU6502::op_BVS() { }
+void CPU6502::op_BVC()
+{
+    branchIF(! m_regs.p.flags.v);
+}
+void CPU6502::op_BVS()
+{
+    branchIF(m_regs.p.flags.v);
+}
 void CPU6502::op_CLC()
 {
     m_regs.p.flags.c = 0;
@@ -210,8 +234,20 @@ void CPU6502::op_INC_ABS() { }
 void CPU6502::op_INC_ABX() { }
 void CPU6502::op_INX() { }
 void CPU6502::op_INY() { }
-void CPU6502::op_JMP_ABS() { }
-void CPU6502::op_JMP_IND() { }
+void CPU6502::op_JMP_ABS()
+{
+    c6502_byte_t l = fetchImm();
+    m_regs.pc.B.h = fetchImm();
+    m_regs.pc.B.l = l;
+}
+void CPU6502::op_JMP_IND()
+{
+    c6502_word_t ptr = 0;
+    ptr = fetchImm();
+    ptr |= fetchImm() << 8;
+    m_regs.pc.B.l = readMem(ptr);
+    m_regs.pc.B.h = readMem(ptr + 1);
+}
 void CPU6502::op_JSR()
 {
     ++m_regs.pc.W;
