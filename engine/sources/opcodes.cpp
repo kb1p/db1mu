@@ -11,6 +11,15 @@
 #define F_B m_regs.p.flags.b
 #define F_I m_regs.p.flags.i
 
+#define FLAG_C 0x01
+#define FLAG_Z 0x02
+#define FLAG_I 0x04
+#define FLAG_D 0x08
+#define FLAG_B 0x10
+#define FLAG_U 0x20
+#define FLAG_V 0x40
+#define FLAG_N 0x80
+
 void CPU6502::op_NOP()
 {
     // Nothing to do, just waste tacts
@@ -139,7 +148,16 @@ void CPU6502::op_BIT_ABS() { }
 void CPU6502::op_BMI() { }
 void CPU6502::op_BNE() { }
 void CPU6502::op_BPL() { }
-void CPU6502::op_BRK() { }
+void CPU6502::op_BRK()
+{
+    push(m_regs.pc.B.h);
+    push(m_regs.pc.B.l);
+    push(m_regs.p.reg | FLAG_B);
+    m_regs.p.flags.i = 1;
+
+    m_regs.pc.B.l = readMem(0xFFFE);
+    m_regs.pc.B.h = readMem(0xFFFF);
+}
 void CPU6502::op_BVC() { }
 void CPU6502::op_BVS() { }
 void CPU6502::op_CLC()
@@ -194,7 +212,16 @@ void CPU6502::op_INX() { }
 void CPU6502::op_INY() { }
 void CPU6502::op_JMP_ABS() { }
 void CPU6502::op_JMP_IND() { }
-void CPU6502::op_JSR() { }
+void CPU6502::op_JSR()
+{
+    ++m_regs.pc.W;
+    push(m_regs.pc.B.h);
+    push(m_regs.pc.B.l);
+    c6502_byte_t l = readMem(m_regs.pc.W - 1);
+    c6502_byte_t h = readMem(m_regs.pc.W);
+    m_regs.pc.B.l = l;
+    m_regs.pc.B.h = h;
+}
 void CPU6502::op_LDA_IMM() { }
 void CPU6502::op_LDA_ZP() { }
 void CPU6502::op_LDA_ZPX() { }
@@ -263,7 +290,12 @@ void CPU6502::op_RTI()
     m_regs.pc.B.l = pop();
     m_regs.pc.B.h = pop();
 }
-void CPU6502::op_RTS() { }
+void CPU6502::op_RTS()
+{
+    m_regs.pc.B.l = pop();
+    m_regs.pc.B.h = pop();
+    ++m_regs.pc.W;
+}
 void CPU6502::op_SBC_IMM() { }
 void CPU6502::op_SBC_ZP() { }
 void CPU6502::op_SBC_ZPX() { }
