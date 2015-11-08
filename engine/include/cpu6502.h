@@ -112,45 +112,64 @@ private:
     }
 
     /*** Operand fetching routines ***/
-    inline c6502_byte_t fetchImm()
+    inline c6502_byte_t fetchImmOp()
     {
         return readMem(m_regs.pc.W++);
     }
 
-    inline c6502_byte_t fetchZP()
+    inline c6502_word_t fetchZPAddr()
     {
-        const c6502_word_t addr = readMem(m_regs.pc.W++);
-        return readMem(addr);
+        return readMem(m_regs.pc.W++);
     }
 
-    inline c6502_byte_t fetchZPX()
+    inline c6502_byte_t fetchZPOp()
+    {
+        return readMem(fetchZPAddr());
+    }
+
+    inline c6502_word_t fetchZPXAddr()
     {
         const c6502_word_t addr = readMem(m_regs.pc.W++) + m_regs.x;
-        return readMem(addr > 0xFFu ? 0 : addr);
+        return addr > 0xFFu ? 0 : addr;
     }
 
-    inline c6502_byte_t fetchABS()
+    inline c6502_byte_t fetchZPXOp()
+    {
+        return readMem(fetchZPXAddr());
+    }
+
+    inline c6502_word_t fetchABSAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
-        return readMem(al | (ah << 8));
+        return al | (ah << 8);
     }
 
-    inline c6502_byte_t fetchABX()
+    inline c6502_byte_t fetchABSOp()
+    {
+        return readMem(fetchABSAddr());
+    }
+
+    inline c6502_word_t fetchABXAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
-        return readMem((al | (ah << 8)) + m_regs.x);
+        return (al | (ah << 8)) + m_regs.x;
     }
 
-    inline c6502_byte_t fetchABY()
+    inline c6502_byte_t fetchABXOp()
+    {
+        return readMem(fetchABXAddr());
+    }
+
+    inline c6502_byte_t fetchABYOp()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
         return readMem((al | (ah << 8)) + m_regs.y);
     }
 
-    inline c6502_byte_t fetchINX()
+    inline c6502_byte_t fetchINXOp()
     {
         const c6502_word_t baddr = (readMem(m_regs.pc.W++) + m_regs.x) & 0xFFu,
                            laddr = readMem(baddr),
@@ -158,7 +177,7 @@ private:
         return readMem(laddr | (haddr << 8));
     }
 
-    inline c6502_byte_t fetchINY()
+    inline c6502_byte_t fetchINYOp()
     {
         const c6502_d_word_t baddr = readMem(m_regs.pc.W++),
                              laddr = readMem(baddr),
@@ -172,7 +191,7 @@ private:
         {
             --m_period;
             c6502_byte_t oldPC_h = (m_regs.pc.W - 1) >> 8;
-            m_regs.pc.W += fetchImm();
+            m_regs.pc.W += fetchImmOp();
             if (oldPC_h != m_regs.pc.B.h)
                 --m_period;
         }

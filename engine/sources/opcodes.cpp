@@ -33,7 +33,7 @@ void CPU6502::op_NOP()
 // Immediate operand (follows opcode in memory)
 void CPU6502::op_ADC_IMM()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchImm();
+    const c6502_word_t r = m_regs.a + F_C + fetchImmOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -46,7 +46,7 @@ void CPU6502::op_ADC_IMM()
 // Zero-page addressing (byte-size address)
 void CPU6502::op_ADC_ZP()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchZP();
+    const c6502_word_t r = m_regs.a + F_C + fetchZPOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -59,7 +59,7 @@ void CPU6502::op_ADC_ZP()
 // Zero-page indexed by X register
 void CPU6502::op_ADC_ZPX()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchZPX();
+    const c6502_word_t r = m_regs.a + F_C + fetchZPXOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -72,7 +72,7 @@ void CPU6502::op_ADC_ZPX()
 // Absolute addressing (word-size address)
 void CPU6502::op_ADC_ABS()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchABS();
+    const c6502_word_t r = m_regs.a + F_C + fetchABSOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -85,7 +85,7 @@ void CPU6502::op_ADC_ABS()
 // Absolute indexed by X register
 void CPU6502::op_ADC_ABX()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchABX();
+    const c6502_word_t r = m_regs.a + F_C + fetchABXOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -98,7 +98,7 @@ void CPU6502::op_ADC_ABX()
 // Absolute indexed by Y register
 void CPU6502::op_ADC_ABY()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchABY();
+    const c6502_word_t r = m_regs.a + F_C + fetchABYOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -110,7 +110,7 @@ void CPU6502::op_ADC_ABY()
 
 void CPU6502::op_ADC_INX()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchINX();
+    const c6502_word_t r = m_regs.a + F_C + fetchINXOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -122,7 +122,7 @@ void CPU6502::op_ADC_INX()
 
 void CPU6502::op_ADC_INY()
 {
-    const c6502_word_t r = m_regs.a + F_C + fetchINY();
+    const c6502_word_t r = m_regs.a + F_C + fetchINYOp();
 
     EVAL_C(r);
     EVAL_Z(r);
@@ -209,7 +209,7 @@ void CPU6502::op_CMP_IMM()
 {
     // Type promotion to a signed 2-byte int is important for CMP
     c6502_test_t r = m_regs.a;
-    r -= fetchImm();
+    r -= fetchImmOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -217,7 +217,7 @@ void CPU6502::op_CMP_IMM()
 void CPU6502::op_CMP_ZP()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchZP();
+    r -= fetchZPOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -226,7 +226,7 @@ void CPU6502::op_CMP_ZP()
 void CPU6502::op_CMP_ZPX()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchZPX();
+    r -= fetchZPXOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -234,7 +234,7 @@ void CPU6502::op_CMP_ZPX()
 void CPU6502::op_CMP_ABS()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchABS();
+    r -= fetchABSOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -242,7 +242,7 @@ void CPU6502::op_CMP_ABS()
 void CPU6502::op_CMP_ABX()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchABX();
+    r -= fetchABXOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -250,7 +250,7 @@ void CPU6502::op_CMP_ABX()
 void CPU6502::op_CMP_ABY()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchABY();
+    r -= fetchABYOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -258,7 +258,7 @@ void CPU6502::op_CMP_ABY()
 void CPU6502::op_CMP_INX()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchINX();
+    r -= fetchINXOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
@@ -266,23 +266,103 @@ void CPU6502::op_CMP_INX()
 void CPU6502::op_CMP_INY()
 {
     c6502_test_t r = m_regs.a;
-    r -= fetchINY();
+    r -= fetchINYOp();
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
 }
-void CPU6502::op_CPX_IMM() { }
-void CPU6502::op_CPX_ZP() { }
-void CPU6502::op_CPX_ABS() { }
-void CPU6502::op_CPY_IMM() { }
-void CPU6502::op_CPY_ZP() { }
-void CPU6502::op_CPY_ABS() { }
-void CPU6502::op_DEC_ZP() { }
-void CPU6502::op_DEC_ZPX() { }
-void CPU6502::op_DEC_ABS() { }
-void CPU6502::op_DEC_ABX() { }
-void CPU6502::op_DEX() { }
-void CPU6502::op_DEY() { }
+void CPU6502::op_CPX_IMM()
+{
+    c6502_test_t r = m_regs.x;
+    r -= fetchImmOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_CPX_ZP()
+{
+    c6502_test_t r = m_regs.x;
+    r -= fetchZPOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_CPX_ABS()
+{
+    c6502_test_t r = m_regs.x;
+    r -= fetchABSOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_CPY_IMM()
+{
+    c6502_test_t r = m_regs.y;
+    r -= fetchImmOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_CPY_ZP()
+{
+    c6502_test_t r = m_regs.y;
+    r -= fetchZPOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_CPY_ABS()
+{
+    c6502_test_t r = m_regs.y;
+    r -= fetchABSOp();
+    EVAL_C(r);
+    EVAL_Z(r);
+    EVAL_N(r);
+}
+void CPU6502::op_DEC_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    const c6502_byte_t op = readMem(addr) - 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_DEC_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    const c6502_byte_t op = readMem(addr) - 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_DEC_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    const c6502_byte_t op = readMem(addr) - 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_DEC_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    const c6502_byte_t op = readMem(addr) - 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_DEX()
+{
+    m_regs.x--;
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_DEY()
+{
+    m_regs.y--;
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
 void CPU6502::op_EOR_IMM() { }
 void CPU6502::op_EOR_ZP() { }
 void CPU6502::op_EOR_ZPX() { }
@@ -299,11 +379,11 @@ void CPU6502::op_INX() { }
 void CPU6502::op_INY() { }
 void CPU6502::op_JMP_ABS()
 {
-    m_regs.pc.W = fetchABS();
+    m_regs.pc.W = fetchABSOp();
 }
 void CPU6502::op_JMP_IND()
 {
-    c6502_word_t ptr = fetchABS();
+    c6502_word_t ptr = fetchABSOp();
     m_regs.pc.B.l = readMem(ptr);
     m_regs.pc.B.h = readMem(ptr + 1);
 }
