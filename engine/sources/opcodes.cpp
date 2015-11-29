@@ -14,7 +14,7 @@
 #define EVAL_C(r) (m_regs.p.flags.c = ((r) & 0x100u) >> 8)
 #define EVAL_Z(r) (m_regs.p.flags.z = (r) == 0)
 #define EVAL_N(r) (m_regs.p.flags.n = ((r) >> 7) & 0x1u)
-#define EVAL_V(r0, r1) (m_regs.p.flags.v = ((r0) & 0x80u) != ((r1) & 0x80u))
+#define EVAL_V(r) (m_regs.p.flags.v = (c6502_test_t(r) > 127 || c6502_test_t(r) < -128 ? 1 : 0))
 
 #define FLAG_C 0x01
 #define FLAG_Z 0x02
@@ -38,7 +38,7 @@ void CPU6502::op_ADC_IMM()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -51,7 +51,7 @@ void CPU6502::op_ADC_ZP()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -64,7 +64,7 @@ void CPU6502::op_ADC_ZPX()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -77,7 +77,7 @@ void CPU6502::op_ADC_ABS()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -90,7 +90,7 @@ void CPU6502::op_ADC_ABX()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -103,7 +103,7 @@ void CPU6502::op_ADC_ABY()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -115,7 +115,7 @@ void CPU6502::op_ADC_INX()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
@@ -127,24 +127,119 @@ void CPU6502::op_ADC_INY()
     EVAL_C(r);
     EVAL_Z(r);
     EVAL_N(r);
-    EVAL_V(m_regs.a, r);
+    EVAL_V(r);
 
     m_regs.a = LO(r);
 }
 
-void CPU6502::op_AND_IMM() { }
-void CPU6502::op_AND_ZP() { }
-void CPU6502::op_AND_ZPX() { }
-void CPU6502::op_AND_ABS() { }
-void CPU6502::op_AND_ABX() { }
-void CPU6502::op_AND_ABY() { }
-void CPU6502::op_AND_INX() { }
-void CPU6502::op_AND_INY() { }
-void CPU6502::op_ASL_ACC() { }
-void CPU6502::op_ASL_ZP() { }
-void CPU6502::op_ASL_ZPX() { }
-void CPU6502::op_ASL_ABS() { }
-void CPU6502::op_ASL_ABX() { }
+void CPU6502::op_AND_IMM()
+{
+    m_regs.a &= fetchImmOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_ZP()
+{
+    m_regs.a &= fetchZPOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_ZPX()
+{
+    m_regs.a &= fetchZPXOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_ABS()
+{
+    m_regs.a &= fetchABSOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_ABX()
+{
+    m_regs.a &= fetchABXOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_ABY()
+{
+    m_regs.a &= fetchABYOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_INX()
+{
+    m_regs.a &= fetchINXOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_AND_INY()
+{
+    m_regs.a &= fetchINYOp();
+
+    EVAL_Z(m_regs.a);
+    EVAL_N(m_regs.a);
+}
+void CPU6502::op_ASL_ACC()
+{
+    F_C = 0x80u & m_regs.a;
+    m_regs.a <<= 1;
+
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ASL_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    c6502_byte_t op = readMem(addr);
+    F_C = 0x80u & op;
+    op <<= 1;
+
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ASL_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    c6502_byte_t op = readMem(addr);
+    F_C = 0x80u & op;
+    op <<= 1;
+
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ASL_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    c6502_byte_t op = readMem(addr);
+    F_C = 0x80u & op;
+    op <<= 1;
+
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ASL_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    c6502_byte_t op = readMem(addr);
+    F_C = 0x80u & op;
+    op <<= 1;
+
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
 void CPU6502::op_BCC()
 {
     branchIF(! m_regs.p.flags.c);
@@ -157,8 +252,22 @@ void CPU6502::op_BEQ()
 {
     branchIF(m_regs.p.flags.z);
 }
-void CPU6502::op_BIT_ZP() { }
-void CPU6502::op_BIT_ABS() { }
+void CPU6502::op_BIT_ZP()
+{
+    const c6502_byte_t r = m_regs.a & fetchZPOp();
+
+    EVAL_Z(r);
+    EVAL_N(r);
+    F_V = (r >> 6) & 0x1u;
+}
+void CPU6502::op_BIT_ABS()
+{
+    const c6502_byte_t r = m_regs.a & fetchABSOp();
+
+    EVAL_N(r);
+    EVAL_Z(r);
+    F_V = (r >> 6) & 0x1u;
+}
 void CPU6502::op_BMI()
 {
     branchIF(m_regs.p.flags.n);
@@ -363,20 +472,106 @@ void CPU6502::op_DEY()
     EVAL_N(m_regs.y);
     EVAL_Z(m_regs.y);
 }
-void CPU6502::op_EOR_IMM() { }
-void CPU6502::op_EOR_ZP() { }
-void CPU6502::op_EOR_ZPX() { }
-void CPU6502::op_EOR_ABS() { }
-void CPU6502::op_EOR_ABX() { }
-void CPU6502::op_EOR_ABY() { }
-void CPU6502::op_EOR_INX() { }
-void CPU6502::op_EOR_INY() { }
-void CPU6502::op_INC_ZP() { }
-void CPU6502::op_INC_ZPX() { }
-void CPU6502::op_INC_ABS() { }
-void CPU6502::op_INC_ABX() { }
-void CPU6502::op_INX() { }
-void CPU6502::op_INY() { }
+void CPU6502::op_EOR_IMM()
+{
+    const c6502_byte_t op = fetchImmOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_ZP()
+{
+    const c6502_byte_t op = fetchZPOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_ZPX()
+{
+    const c6502_byte_t op = fetchZPXOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_ABS()
+{
+    const c6502_byte_t op = fetchABSOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_ABX()
+{
+    const c6502_byte_t op = fetchABXOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_ABY()
+{
+    const c6502_byte_t op = fetchABYOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_INX()
+{
+    const c6502_byte_t op = fetchINXOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_EOR_INY()
+{
+    const c6502_byte_t op = fetchINYOp();
+    m_regs.a ^= op;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_INC_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    const c6502_byte_t op = readMem(addr) + 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_INC_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    const c6502_byte_t op = readMem(addr) + 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_INC_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    const c6502_byte_t op = readMem(addr) + 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_INC_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    const c6502_byte_t op = readMem(addr) + 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_INX()
+{
+    m_regs.x++;
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_INY()
+{
+    m_regs.y++;
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
 void CPU6502::op_JMP_ABS()
 {
     m_regs.pc.W = fetchABSOp();
@@ -397,24 +592,115 @@ void CPU6502::op_JSR()
     m_regs.pc.B.l = l;
     m_regs.pc.B.h = h;
 }
-void CPU6502::op_LDA_IMM() { }
-void CPU6502::op_LDA_ZP() { }
-void CPU6502::op_LDA_ZPX() { }
-void CPU6502::op_LDA_ABS() { }
-void CPU6502::op_LDA_ABX() { }
-void CPU6502::op_LDA_ABY() { }
-void CPU6502::op_LDA_INX() { }
-void CPU6502::op_LDA_INY() { }
-void CPU6502::op_LDX_IMM() { }
-void CPU6502::op_LDX_ZP() { }
-void CPU6502::op_LDX_ZPY() { }
-void CPU6502::op_LDX_ABS() { }
-void CPU6502::op_LDX_ABY() { }
-void CPU6502::op_LDY_IMM() { }
-void CPU6502::op_LDY_ZP() { }
-void CPU6502::op_LDY_ZPY() { }
-void CPU6502::op_LDY_ABS() { }
-void CPU6502::op_LDY_ABY() { }
+
+void CPU6502::op_LDA_IMM()
+{
+    m_regs.a = fetchImmOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_ZP()
+{
+    m_regs.a = fetchZPOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_ZPX()
+{
+    m_regs.a = fetchZPXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_ABS()
+{
+    m_regs.a = fetchABSOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_ABX()
+{
+    m_regs.a = fetchABXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_ABY()
+{
+    m_regs.a = fetchABYOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_INX()
+{
+    m_regs.a = fetchINXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDA_INY()
+{
+    m_regs.a = fetchINYOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_LDX_IMM()
+{
+    m_regs.x = fetchImmOp();
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_LDX_ZP()
+{
+    m_regs.x = fetchZPOp();
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_LDX_ZPY()
+{
+    m_regs.x = fetchZPYOp();
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_LDX_ABS()
+{
+    m_regs.x = fetchABSOp();
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_LDX_ABY()
+{
+    m_regs.x = fetchABYOp();
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_LDY_IMM()
+{
+    m_regs.y = fetchImmOp();
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
+void CPU6502::op_LDY_ZP()
+{
+    m_regs.y = fetchZPOp();
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
+void CPU6502::op_LDY_ZPX()
+{
+    m_regs.y = fetchZPXOp();
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
+void CPU6502::op_LDY_ABS()
+{
+m_regs.y = fetchABSOp();
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
+void CPU6502::op_LDY_ABX()
+{
+    m_regs.y = fetchABXOp();
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
 void CPU6502::op_LSR_ACC() { }
 void CPU6502::op_LSR_ZP() { }
 void CPU6502::op_LSR_ZPX() { }

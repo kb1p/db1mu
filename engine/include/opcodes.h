@@ -92,9 +92,9 @@ enum OpCode
     LDX_ABY = 0xBE,
     LDY_IMM = 0xA0,
     LDY_ZP = 0xA4,
-    LDY_ZPY = 0xB4,
+    LDY_ZPX = 0xB4,
     LDY_ABS = 0xAC,
-    LDY_ABY = 0xBC,
+    LDY_ABX = 0xBC,
     LSR_ACC = 0x4A,
     LSR_ZP = 0x46,
     LSR_ZPX = 0x56,
@@ -247,9 +247,9 @@ enum OpCode
                             OP(LDX_ABY)  \
                             OP(LDY_IMM)  \
                             OP(LDY_ZP)   \
-                            OP(LDY_ZPY)  \
+                            OP(LDY_ZPX)  \
                             OP(LDY_ABS)  \
-                            OP(LDY_ABY)  \
+                            OP(LDY_ABX)  \
                             OP(LSR_ACC)  \
                             OP(LSR_ZP)   \
                             OP(LSR_ZPX)  \

@@ -138,6 +138,17 @@ private:
         return readMem(fetchZPXAddr());
     }
 
+    inline c6502_word_t fetchZPYAddr()
+    {
+        const c6502_word_t addr = readMem(m_regs.pc.W++) + m_regs.y;
+        return addr > 0xFFu ? 0 : addr;
+    }
+
+    inline c6502_byte_t fetchZPYOp()
+    {
+        return readMem(fetchZPYAddr());
+    }
+
     inline c6502_word_t fetchABSAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
