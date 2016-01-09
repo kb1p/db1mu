@@ -173,27 +173,42 @@ private:
         return readMem(fetchABXAddr());
     }
 
-    inline c6502_byte_t fetchABYOp()
+    inline c6502_word_t fetchABYAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
-        return readMem((al | (ah << 8)) + m_regs.y);
+        return (al | (ah << 8)) + m_regs.y;
     }
 
-    inline c6502_byte_t fetchINXOp()
+    inline c6502_byte_t fetchABYOp()
+    {
+        return readMem(fetchABYAddr());
+    }
+
+    inline c6502_word_t fetchINXAddr()
     {
         const c6502_word_t baddr = (readMem(m_regs.pc.W++) + m_regs.x) & 0xFFu,
                            laddr = readMem(baddr),
                            haddr = readMem((baddr + 1) & 0xFFu);
-        return readMem(laddr | (haddr << 8));
+        return laddr | (haddr << 8);
     }
 
-    inline c6502_byte_t fetchINYOp()
+    inline c6502_byte_t fetchINXOp()
+    {
+        return readMem(fetchINXAddr());
+    }
+
+    inline c6502_word_t fetchINYAddr()
     {
         const c6502_d_word_t baddr = readMem(m_regs.pc.W++),
                              laddr = readMem(baddr),
                              haddr = readMem((baddr + 1) & 0xFFu);
-        return readMem((laddr | (haddr << 8)) + m_regs.y);
+        return (laddr | (haddr << 8)) + m_regs.y;
+    }
+
+    inline c6502_byte_t fetchINYOp()
+    {
+        return readMem(fetchINYAddr());
     }
 
     inline void branchIF(bool expression)

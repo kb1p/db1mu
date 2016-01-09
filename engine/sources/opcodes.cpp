@@ -701,23 +701,105 @@ void CPU6502::op_LDY_ABX()
     EVAL_N(m_regs.y);
     EVAL_Z(m_regs.y);
 }
-void CPU6502::op_LSR_ACC() { }
-void CPU6502::op_LSR_ZP() { }
-void CPU6502::op_LSR_ZPX() { }
-void CPU6502::op_LSR_ABS() { }
-void CPU6502::op_LSR_ABX() { }
-void CPU6502::op_ORA_IMM() { }
-void CPU6502::op_ORA_ZP() { }
-void CPU6502::op_ORA_ZPX() { }
-void CPU6502::op_ORA_ABS() { }
-void CPU6502::op_ORA_ABX() { }
-void CPU6502::op_ORA_ABY() { }
-void CPU6502::op_ORA_INX() { }
-void CPU6502::op_ORA_INY() { }
+void CPU6502::op_LSR_ACC()
+{
+    m_regs.a >>= 1;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_C(m_regs.a);
+}
+void CPU6502::op_LSR_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    c6502_byte_t op = readMem(addr);
+    op >>= 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    EVAL_C(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_LSR_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    c6502_byte_t op = readMem(addr);
+    op >>= 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    EVAL_C(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_LSR_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    c6502_byte_t op = readMem(addr);
+    op >>= 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    EVAL_C(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_LSR_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    c6502_byte_t op = readMem(addr);
+    op >>= 1;
+    EVAL_N(op);
+    EVAL_Z(op);
+    EVAL_C(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ORA_IMM()
+{
+    m_regs.a |= fetchImmOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_ZP()
+{
+    m_regs.a |= fetchZPOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_ZPX()
+{
+    m_regs.a |= fetchZPXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_ABS()
+{
+    m_regs.a |= fetchABSOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_ABX()
+{
+    m_regs.a |= fetchABXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_ABY()
+{
+    m_regs.a |= fetchABYOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_INX()
+{
+    m_regs.a |= fetchINXOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ORA_INY()
+{
+    m_regs.a |= fetchINYOp();
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
 
 void CPU6502::op_PHA()
 {
-   push(m_regs.a);
+    push(m_regs.a);
 }
 
 void CPU6502::op_PHP()
@@ -735,16 +817,110 @@ void CPU6502::op_PLP()
 {
     m_regs.p.reg = pop();
 }
-void CPU6502::op_ROL_ACC() { }
-void CPU6502::op_ROL_ZP() { }
-void CPU6502::op_ROL_ZPX() { }
-void CPU6502::op_ROL_ABS() { }
-void CPU6502::op_ROL_ABX() { }
-void CPU6502::op_ROR_ACC() { }
-void CPU6502::op_ROR_ZP() { }
-void CPU6502::op_ROR_ZPX() { }
-void CPU6502::op_ROR_ABS() { }
-void CPU6502::op_ROR_ABX() { }
+void CPU6502::op_ROL_ACC()
+{
+    const c6502_byte_t oldC = F_C;
+    F_C = (0x80u & m_regs.a) >> 7;
+    m_regs.a = (m_regs.a << 1) | oldC;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ROL_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = (0x80u & op) >> 7;
+    op = (op << 1) | oldC;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROL_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = (0x80u & op) >> 7;
+    op = (op << 1) | oldC;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROL_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = (0x80u & op) >> 7;
+    op = (op << 1) | oldC;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROL_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = (0x80u & op) >> 7;
+    op = (op << 1) | oldC;
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROR_ACC()
+{
+    const c6502_byte_t oldC = F_C;
+    F_C = 0x01u & m_regs.a;
+    m_regs.a = (m_regs.a >> 1) | (oldC << 7);
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_ROR_ZP()
+{
+    const c6502_word_t addr = fetchZPAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = 0x01u & op;
+    op = (op >> 1) | (oldC << 7);
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROR_ZPX()
+{
+    const c6502_word_t addr = fetchZPXAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = 0x01u & op;
+    op = (op >> 1) | (oldC << 7);
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROR_ABS()
+{
+    const c6502_word_t addr = fetchABSAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = 0x01u & op;
+    op = (op >> 1) | (oldC << 7);
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
+void CPU6502::op_ROR_ABX()
+{
+    const c6502_word_t addr = fetchABXAddr();
+    c6502_byte_t op = readMem(addr);
+    const c6502_byte_t oldC = F_C;
+    F_C = 0x01u & op;
+    op = (op >> 1) | (oldC << 7);
+    EVAL_N(op);
+    EVAL_Z(op);
+    writeMem(addr, op);
+}
 void CPU6502::op_RTI()
 {
     m_regs.p.reg = pop();
@@ -757,14 +933,78 @@ void CPU6502::op_RTS()
     m_regs.pc.B.h = pop();
     ++m_regs.pc.W;
 }
-void CPU6502::op_SBC_IMM() { }
-void CPU6502::op_SBC_ZP() { }
-void CPU6502::op_SBC_ZPX() { }
-void CPU6502::op_SBC_ABS() { }
-void CPU6502::op_SBC_ABX() { }
-void CPU6502::op_SBC_ABY() { }
-void CPU6502::op_SBC_INX() { }
-void CPU6502::op_SBC_INY() { }
+void CPU6502::op_SBC_IMM()
+{
+    const c6502_byte_t opb = fetchImmOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_ZP()
+{
+    const c6502_byte_t opb = fetchZPOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_ZPX()
+{
+    const c6502_byte_t opb = fetchZPXOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_ABS()
+{
+    const c6502_byte_t opb = fetchABSOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_ABX()
+{
+    const c6502_byte_t opb = fetchABXOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_ABY()
+{
+    const c6502_byte_t opb = fetchABYOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_INX()
+{
+    const c6502_byte_t opb = fetchINXOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
+void CPU6502::op_SBC_INY()
+{
+    const c6502_byte_t opb = fetchINYOp() + F_C;
+    F_C = m_regs.a < opb ? 1 : 0;
+    m_regs.a -= opb;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+    EVAL_V(m_regs.a);
+}
 void CPU6502::op_SEC()
 {
     m_regs.p.flags.c = 1;
@@ -778,22 +1018,92 @@ void CPU6502::op_SEI()
 {
     m_regs.p.flags.i = 1;
 }
-void CPU6502::op_STA_ZP() { }
-void CPU6502::op_STA_ZPX() { }
-void CPU6502::op_STA_ABS() { }
-void CPU6502::op_STA_ABX() { }
-void CPU6502::op_STA_ABY() { }
-void CPU6502::op_STA_INX() { }
-void CPU6502::op_STA_INY() { }
-void CPU6502::op_STX_ZP() { }
-void CPU6502::op_STX_ZPY() { }
-void CPU6502::op_STX_ABS() { }
-void CPU6502::op_STY_ZP() { }
-void CPU6502::op_STY_ZPX() { }
-void CPU6502::op_STY_ABS() { }
-void CPU6502::op_TAX() { }
-void CPU6502::op_TAY() { }
-void CPU6502::op_TSX() { }
-void CPU6502::op_TXA() { }
-void CPU6502::op_TXS() { }
-void CPU6502::op_TYA() { }
+void CPU6502::op_STA_ZP()
+{
+    // Writing to memory doesn't modify flags
+    writeMem(fetchZPAddr(), m_regs.a);
+}
+void CPU6502::op_STA_ZPX()
+{
+    writeMem(fetchZPXAddr(), m_regs.a);
+}
+void CPU6502::op_STA_ABS()
+{
+    writeMem(fetchABSAddr(), m_regs.a);
+}
+void CPU6502::op_STA_ABX()
+{
+    writeMem(fetchABXAddr(), m_regs.a);
+}
+void CPU6502::op_STA_ABY()
+{
+    writeMem(fetchABYAddr(), m_regs.a);
+}
+void CPU6502::op_STA_INX()
+{
+    writeMem(fetchINXAddr(), m_regs.a);
+}
+void CPU6502::op_STA_INY()
+{
+    writeMem(fetchINYAddr(), m_regs.a);
+}
+void CPU6502::op_STX_ZP()
+{
+    writeMem(fetchZPAddr(), m_regs.x);
+}
+void CPU6502::op_STX_ZPY()
+{
+    writeMem(fetchZPYAddr(), m_regs.x);
+}
+void CPU6502::op_STX_ABS()
+{
+    writeMem(fetchABSAddr(), m_regs.x);
+}
+void CPU6502::op_STY_ZP()
+{
+    writeMem(fetchZPAddr(), m_regs.y);
+}
+void CPU6502::op_STY_ZPX()
+{
+    writeMem(fetchZPXAddr(), m_regs.y);
+}
+void CPU6502::op_STY_ABS()
+{
+    writeMem(fetchABSAddr(), m_regs.y);
+}
+void CPU6502::op_TAX()
+{
+    m_regs.x = m_regs.a;
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_TAY()
+{
+    m_regs.y = m_regs.a;
+    EVAL_N(m_regs.y);
+    EVAL_Z(m_regs.y);
+}
+void CPU6502::op_TSX()
+{
+    m_regs.x = m_regs.s;
+    EVAL_N(m_regs.x);
+    EVAL_Z(m_regs.x);
+}
+void CPU6502::op_TXA()
+{
+    m_regs.a = m_regs.x;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
+void CPU6502::op_TXS()
+{
+    m_regs.s = m_regs.x;
+    EVAL_N(m_regs.s);
+    EVAL_Z(m_regs.s);
+}
+void CPU6502::op_TYA()
+{
+    m_regs.a = m_regs.y;
+    EVAL_N(m_regs.a);
+    EVAL_Z(m_regs.a);
+}
