@@ -9,6 +9,7 @@
 
 #include "cpu6502.h"
 #include "opcodes.h"
+#include "debugger.h"
 #include "Cartridge.h"
 #include "PPU.h"
 #include <stddef.h>
@@ -83,6 +84,7 @@ c6502_byte_t CPU6502::readMem(c6502_word_t addr)
         case 7:
             return m_activeCartrige->rom[1].Read(addr & 0x1FFF);
     }
+    return 0;
 }
 
 void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
@@ -175,6 +177,8 @@ void CPU6502::Clock()
 
 c6502_byte_t CPU6502::step()
 {
+    if (m_dbg)
+        (*m_dbg)();
     c6502_byte_t opcode = advance();
 
     OpHandler oph = s_ophandlers[opcode];

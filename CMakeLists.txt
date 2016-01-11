@@ -4,6 +4,9 @@ project(b1mulator)
 
 include_directories("engine/include")
 
-add_subdirectory("engine")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=gnu++0x")
 
-add_subdirectory("gui")
+add_subdirectory("engine")
+add_subdirectory("bin")
+
+#add_subdirectory("gui")

@@ -574,11 +574,11 @@ void CPU6502::op_INY()
 }
 void CPU6502::op_JMP_ABS()
 {
-    m_regs.pc.W = fetchABSOp();
+    m_regs.pc.W = fetchABSAddr();
 }
 void CPU6502::op_JMP_IND()
 {
-    c6502_word_t ptr = fetchABSOp();
+    c6502_word_t ptr = fetchABSAddr();
     m_regs.pc.B.l = readMem(ptr);
     m_regs.pc.B.h = readMem(ptr + 1);
 }
