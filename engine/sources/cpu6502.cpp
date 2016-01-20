@@ -13,6 +13,7 @@
 #include "Cartridge.h"
 #include "PPU.h"
 #include <stddef.h>
+#include <cassert>
 
 // Tacts per period: { PAL, NTSC }
 static const int TPP[2] = { 59182, 71595 };
@@ -65,7 +66,6 @@ CPU6502::CPU6502(Mode mode)
     }
 }
 
-
 c6502_byte_t CPU6502::readMem(c6502_word_t addr)
 {
     switch (addr >> 13)
@@ -73,8 +73,12 @@ c6502_byte_t CPU6502::readMem(c6502_word_t addr)
         case 0:
             return m_ram.Read(addr & 0x7FF);
         case 1:
+            // PPU
+            return m_ppu->GetRegisters().Read(addr & 0x0F);
         case 2:
-            return readIO(addr);
+            // APU
+            assert(false && "APU is not yet implemented");
+            break;
         case 3:
             return m_activeCartrige->wram.Read(addr & 0x1FFF);
         case 4:
@@ -96,10 +100,12 @@ void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
             m_ram.Write(addr & 0x7FF, val);
             break;
         case 1:
-            m_ppu->GetRegisters().Write(addr & 0x1F, val);
+            // To PPU registers
+            m_ppu->GetRegisters().Write(addr & 0x0F, val);
+            break;
         case 2:
-            // To GPU or APU registers
-            writeIO(addr, val);
+            // To APU registers
+            assert(false && "APU is not yet implemented");
             break;
         case 3:
             // To cartridge RAM
@@ -109,6 +115,17 @@ void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
             // Write to registers of memory controller on cartridge
             writeMMC(addr, val);
     }
+}
+
+c6502_byte_t CPU6502::readMMC(c6502_word_t addr)
+{
+    assert(false && "MMC is not implemented (and there is no idea what it is)");
+    return 0;
+}
+
+void CPU6502::writeMMC(c6502_word_t addr, c6502_byte_t val)
+{
+    assert(false && "MMC is not implemented (and there is no idea what it is)");
 }
 
 void CPU6502::updateScreen()
