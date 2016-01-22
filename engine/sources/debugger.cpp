@@ -3,6 +3,14 @@
 #include <iostream>
 #include <iomanip>
 #include <string.h>
+#include <DebugCommand.h>
+#include "dbg_cmd.y.hpp"
+
+
+int yyparse (DebugCommand* cmdParsed);
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+YY_BUFFER_STATE yy_scan_string (const char * yystr );
+void yy_delete_buffer (YY_BUFFER_STATE b);
 
 Debugger::Debugger(CPU6502 *cpu)
         : m_cpu(cpu), m_clock(*this)
@@ -24,46 +32,62 @@ void Debugger::Start(long freq)
 void Debugger::Reset()
 {
     m_cpu->reset();
+    std::cout << " < S T A R T >\n";
+    Interact();
 }
 
-void Debugger::InterruptIfNeed()
+void Debugger::Interact()
 {
-    bool needBreak = true; // todo: Check BREAKs and WATCHs
-    if (!needBreak)
-        return;
     char cmdLine[256];
-    Command command;
+    DebugCommand cmd;
     do {
         std::cout << "(db1mu-dbg)" << std::hex << std::setfill('0') << std::setw(4) << int(m_cpu->m_regs.pc.W) << "> ";
-        std::cin >> cmdLine;
+        std::cin.getline(cmdLine, sizeof(cmdLine));
         if (std::cin.eof()) {
             std::cout << "\n^D\n\n";
             exit(0);
         }
-        command = ParseCommand(cmdLine);
-        switch (command.cmd) {
-            case Command::CMD_PrintCPUState:
+        cmd = ParseDebugCommand(cmdLine);
+        switch (cmd.cmd) {
+            case DebugCommand::CMD_PrintCPUState:
                 PrintCPUState();
                 break;
-            case Command::CMD_Unknown:
-                std::cout << "unknown command " << cmdLine << "\n";
+            case DebugCommand::CMD_Continue:
                 break;
-            case Command::CMD_Continue:
+            case DebugCommand::CMD_PrintMemoryByte:
+                PrintMem(cmd.args.mem_byte);
+                break;
+            case DebugCommand::CMD_PrintMemoryArray:
+                PrintMem(cmd.args.mem_array.mem_ptr, cmd.args.mem_array.array_len);
+                break;
+            case DebugCommand::CMD_Break:
+                SetBreak(cmd.args.break_addr);
+                break;
+            case DebugCommand::CMD_RST:
+                Reset();
+                break;
+            case DebugCommand::CMD_Unknown:
+                std::cout << "unknown DebugCommand " << cmdLine << "\n";
                 break;
         }
-    } while (command.cmd != Command::CMD_Continue);
+    } while (cmd.cmd != DebugCommand::CMD_Continue);
 }
 
-Debugger::Command Debugger::ParseCommand(const char *cmdLine)
+void Debugger::InterruptIfNeed()
 {
-    Command cmd;
-    if (strcmp(cmdLine, "pcpu") == 0) {
-        cmd.cmd = Command::CMD_PrintCPUState;
-    } else if (strcmp(cmdLine, "con") == 0) {
-        cmd.cmd = Command::CMD_Continue;
-    } else {
-        cmd.cmd = Command::CMD_Unknown;
-    }
+    bool needBreak = m_breaks.count(m_cpu->m_regs.pc.W) == 1; // todo: Check WATCHs
+    if (needBreak)
+        Interact();
+}
+
+DebugCommand Debugger::ParseDebugCommand(const char *cmdLine)
+{
+    DebugCommand cmd;
+
+    YY_BUFFER_STATE bid = yy_scan_string(cmdLine);
+    if (yyparse(&cmd))
+        cmd.cmd = DebugCommand::CMD_Unknown;
+    yy_delete_buffer(bid);
     return cmd;
 }
 
@@ -90,4 +114,27 @@ void Debugger::PrintCPUState()
     << "\n";
     std::cout << "period = " << std::dec << m_cpu->m_period << "\n";
 
+}
+
+void Debugger::PrintMem(c6502_word_t ptr)
+{
+    std::cout << std::hex << "0x" << std::setfill('0') << std::setw(4) <<  ptr << ": " << c6502_word_t(m_cpu->readMem(ptr)) << "\n";
+}
+void Debugger::PrintMem(c6502_word_t ptr, c6502_word_t len)
+{
+    std::cout << std::hex << "0x" << ptr << ":";
+    for (c6502_word_t i = 0; i < len; ++i) {
+        if (i % 16 == 0)
+            std::cout << "\n";
+        else if (i % 8 == 0)
+            std::cout << "   ";
+        std::cout << std::setfill('0') << std::setw(2) << c6502_word_t(m_cpu->readMem(ptr + i)) << " ";
+    }
+    std::cout << "\n";
+}
+
+void Debugger::SetBreak(c6502_word_t ptr)
+{
+    std::cout << "New break at 0x" << std::setfill('0') << std::setw(4) <<  ptr << "\n";
+    m_breaks.insert(ptr);
 }
