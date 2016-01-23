@@ -1,4 +1,5 @@
 %{
+#include "DebugCommand.h"
 #include "dbg_cmd.y.hpp"
 %}
 %%
