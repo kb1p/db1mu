@@ -84,8 +84,6 @@ private:
 
     c6502_byte_t readMem(c6502_word_t addr);
     void writeMem(c6502_word_t addr, c6502_byte_t val);
-    c6502_byte_t readMMC(c6502_word_t addr);
-    void writeMMC(c6502_word_t addr, c6502_byte_t val);
     void updateScreen();
     void testKeys();
     void IRQ();

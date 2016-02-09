@@ -74,21 +74,16 @@ c6502_byte_t CPU6502::readMem(c6502_word_t addr)
             return m_ram.Read(addr & 0x7FF);
         case 1:
             // PPU
-            return m_ppu->GetRegisters().Read(addr & 0x0F);
+            // return m_ppu->GetRegisters().Read(addr & 0x0F);
+            assert(false && "PPU is not yet implemented");
         case 2:
             // APU
             assert(false && "APU is not yet implemented");
             break;
-        case 3:
-            return m_activeCartrige->wram.Read(addr & 0x1FFF);
-        case 4:
-        case 5:
-            return m_activeCartrige->rom[0].Read(addr & 0x1FFF);
-        case 6:
-        case 7:
-            return m_activeCartrige->rom[1].Read(addr & 0x1FFF);
+        default:
+            // Read from the cartridge
+            return m_activeCartrige->read(addr);
     }
-    return 0;
 }
 
 void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
@@ -101,31 +96,17 @@ void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
             break;
         case 1:
             // To PPU registers
-            m_ppu->GetRegisters().Write(addr & 0x0F, val);
+            // m_ppu->GetRegisters().Write(addr & 0x0F, val);
+            assert(false && "PPU is not yet implemented");
             break;
         case 2:
             // To APU registers
             assert(false && "APU is not yet implemented");
             break;
-        case 3:
-            // To cartridge RAM
-            m_activeCartrige->wram.Write(addr & 0x1FFF, val);
-            break;
         default:
-            // Write to registers of memory controller on cartridge
-            writeMMC(addr, val);
+            // To the cartridge mapper
+            m_activeCartrige->write(addr, val);
     }
-}
-
-c6502_byte_t CPU6502::readMMC(c6502_word_t addr)
-{
-    assert(false && "MMC is not implemented (and there is no idea what it is)");
-    return 0;
-}
-
-void CPU6502::writeMMC(c6502_word_t addr, c6502_byte_t val)
-{
-    assert(false && "MMC is not implemented (and there is no idea what it is)");
 }
 
 void CPU6502::updateScreen()
@@ -207,6 +188,7 @@ c6502_byte_t CPU6502::step()
         m_state = STATE_ERROR;
 
         // TODO: add error handling
+        assert(false && "Bad opcode");
         return 0;
     }
 }
