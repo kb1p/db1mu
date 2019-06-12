@@ -31,7 +31,6 @@ ROMLoader::ROMLoader(Cartrige& cart):
 
 // Read & validate
 static void sread(void *pDest, size_t nBytes, istream &in)
-    throw(Exception)
 {
     in.read(reinterpret_cast<char*>(pDest), nBytes);
     if (static_cast<size_t>(in.gcount()) < nBytes)
@@ -41,7 +40,6 @@ static void sread(void *pDest, size_t nBytes, istream &in)
 void ROMLoader::loadRawData(istream &in,
                             c6502_word_t addr,
                             c6502_word_t len)
-    throw(Exception)
 {
     assert(addr >= 0x8000);
 
@@ -74,7 +72,6 @@ void ROMLoader::loadRawData(istream &in,
 }
 
 void ROMLoader::loadNES(const char *file)
-    throw(Exception)
 {
     ifstream in(file, ios::in | ios::binary);
     if (!in.is_open())

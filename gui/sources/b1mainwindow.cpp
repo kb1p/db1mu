@@ -38,6 +38,9 @@ b1MainWindow::b1MainWindow()
 {
     ui = new Ui::b1MainWindow;
     ui->setupUi ( this );
+
+    m_screen = new ScreenWidget(this);
+    setCentralWidget(m_screen);
 }
 
 b1MainWindow::~b1MainWindow()
@@ -54,7 +57,7 @@ void b1MainWindow::closeEvent ( QCloseEvent *e )
     if ( r == QMessageBox::Yes )
     {
         e->accept();
-        foo();
+        //foo();
     }
     else
     {

@@ -30,6 +30,7 @@
 #define B1MAINWINDOW_H
 
 #include <QMainWindow>
+#include "screenwidget.h"
 
 namespace Ui
 {
@@ -48,6 +49,7 @@ protected:
 
 private:
     Ui::b1MainWindow* ui;
+    ScreenWidget *m_screen;
 };
 
 #endif // B1MAINWINDOW_H

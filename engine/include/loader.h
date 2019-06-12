@@ -91,7 +91,7 @@ public:
      * \param file NES file path.
      * \see http://fms.komkon.org/EMUL8/NES.html#LABM
      */
-    void loadNES(const char *file) throw(Exception);
+    void loadNES(const char *file);
 
     /*!
      * Load a binary file contents as cartridge ROM data.
@@ -102,7 +102,7 @@ public:
      */
     void loadRawData(std::istream &in,
                      c6502_word_t addr = 0x8000u,
-                     c6502_word_t len = Mapper::ROM_SIZE * 2) throw(Exception);
+                     c6502_word_t len = Mapper::ROM_SIZE * 2);
 
     const NESHeader &header() const
     {

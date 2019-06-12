@@ -17,4 +17,5 @@ message("UIs: ${uis}")
 
 add_executable(b1mulator ${sources} ${mocs} ${uis})
 
-target_link_libraries(b1mulator b1-eng Qt5::Widgets) 
+target_link_libraries(b1mulator b1-eng Qt5::Widgets)
+
