@@ -284,7 +284,8 @@ void CPU6502::op_BRK()
 {
     push(m_regs.pc.B.h);
     push(m_regs.pc.B.l);
-    push(m_regs.p.reg | FLAG_B);
+    m_regs.p.flags.b = 1;
+    push(m_regs.p.reg);
     m_regs.p.flags.i = 1;
 
     m_regs.pc.B.l = readMem(0xFFFE);

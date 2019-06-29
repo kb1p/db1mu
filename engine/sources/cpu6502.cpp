@@ -12,6 +12,7 @@
 #include "debugger.h"
 #include "Cartridge.h"
 #include "PPU.h"
+#include "log.h"
 #include <stddef.h>
 #include <cassert>
 
@@ -42,11 +43,11 @@ static const c6502_byte_t CYCLES[256] =
 CPU6502::OpHandler CPU6502::s_ophandlers[OPCODE_COUNT];
 
 /*** CPU class implementation ***/
-CPU6502::CPU6502(Mode mode)
+CPU6502::CPU6502(Mode mode, Bus &bus)
     : m_mode(mode)
     , m_state(STATE_HALTED)
     , m_period(0)
-    , m_activeCartrige(0)
+    , m_bus { bus }
 {
     // Static initializer
     static bool staticInitComplete = false;
@@ -63,49 +64,6 @@ CPU6502::CPU6502(Mode mode)
         FOR_EACH_OPCODE(OPASGN)
 
         staticInitComplete = true;
-    }
-}
-
-c6502_byte_t CPU6502::readMem(c6502_word_t addr)
-{
-    switch (addr >> 13)
-    {
-        case 0:
-            return m_ram.Read(addr & 0x7FF);
-        case 1:
-            // PPU
-            // return m_ppu->GetRegisters().Read(addr & 0x0F);
-            assert(false && "PPU is not yet implemented");
-        case 2:
-            // APU
-            assert(false && "APU is not yet implemented");
-            break;
-        default:
-            // Read from the cartridge
-            return m_activeCartrige->read(addr);
-    }
-}
-
-void CPU6502::writeMem(c6502_word_t addr, c6502_byte_t val)
-{
-    switch (addr >> 13)
-    {
-        case 0:
-            // To internal RAM
-            m_ram.Write(addr & 0x7FF, val);
-            break;
-        case 1:
-            // To PPU registers
-            // m_ppu->GetRegisters().Write(addr & 0x0F, val);
-            assert(false && "PPU is not yet implemented");
-            break;
-        case 2:
-            // To APU registers
-            assert(false && "APU is not yet implemented");
-            break;
-        default:
-            // To the cartridge mapper
-            m_activeCartrige->write(addr, val);
     }
 }
 
@@ -131,12 +89,27 @@ void CPU6502::reset()
 // Handle maskable interrupt
 void CPU6502::IRQ()
 {
+    if (m_regs.p.flags.i == 0)
+    {
+        Log::v("IRQ");
 
+        // Like BRK opcode, but without B flag
+        push(m_regs.pc.B.h);
+        push(m_regs.pc.B.l);
+        push(m_regs.p.reg);
+        m_regs.p.flags.i = 1;
+
+        m_regs.pc.B.l = readMem(0xFFFE);
+        m_regs.pc.B.h = readMem(0xFFFF);
+
+        m_period -= 7;
+    }
 }
 
 // Handle non-maskable interrupt
 void CPU6502::NMI()
 {
+    Log::v("NMI");
     push(m_regs.pc.B.h);
     push(m_regs.pc.B.l);
     push(m_regs.p.reg);
@@ -147,14 +120,7 @@ void CPU6502::NMI()
     m_period -= 7;
 }
 
-void CPU6502::InjectCartrige(Cartrige* cartridge)
-{
-    m_activeCartrige = cartridge;
-    reset();
-}
-
-
-void CPU6502::Clock()
+void CPU6502::clock()
 {
     if (m_state == STATE_RUN)
     {
@@ -169,7 +135,7 @@ void CPU6502::Clock()
     }
     else
     {
-        // TODO: log
+        Log::e("Unexpected CPU state (%d)", m_state);
     }
 }
 
@@ -187,7 +153,7 @@ c6502_byte_t CPU6502::step()
     {
         m_state = STATE_ERROR;
 
-        // TODO: add error handling
+        Log::e("Bad opcode %X", opcode);
         assert(false && "Bad opcode");
         return 0;
     }

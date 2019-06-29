@@ -7,7 +7,7 @@ void yyerror(DebugCommand* cmdParsed, const char *);
 
 %parse-param {DebugCommand* cmdParsed}
 
-%token CMD_PCPU CMD_PMEM CMD_CONTINUE CMD_BREAK CMD_RST NUMBER
+%token CMD_PCPU CMD_PMEM CMD_CONTINUE CMD_BREAK CMD_RST CMD_STEP NUMBER
 
 %%
 
@@ -22,6 +22,7 @@ command:
 	|	cmd_continue
 	|	cmd_break
 	|	cmd_rst
+	|   cmd_step
 	;
 
 cmd_print_mem_byte:
@@ -64,6 +65,11 @@ cmd_rst:
 //            printf("\nprint CPU state\n");
 			cmdParsed->cmd = DebugCommand::CMD_RST;
 		}
+
+cmd_step:
+        CMD_STEP {
+            cmdParsed->cmd = DebugCommand::CMD_Step;
+        }
 ;
 
 

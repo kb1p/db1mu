@@ -11,6 +11,7 @@ struct DebugCommand {
         CMD_Continue,
         CMD_Break,
         CMD_RST,
+        CMD_Step,
         CMD_Unknown
     };
     CMD cmd;

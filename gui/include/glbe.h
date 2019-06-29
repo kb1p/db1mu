@@ -8,12 +8,11 @@
 class GLRenderingBackend: public RenderingBackend
 {
     QOpenGLFunctions *const m_gl;
+    GLuint m_spriteAtlas;
 
 public:
-    explicit GLRenderingBackend(QOpenGLFunctions *glFunctions):
-        m_gl { glFunctions }
-    {
-    }
+    explicit GLRenderingBackend(QOpenGLFunctions *glFunctions);
+
 };
 
 #endif

@@ -2,11 +2,8 @@
 #define CPU6502_H
 
 #include "common.h"
-#include "storage.h"
 #include "opcodes.h"
-
-struct Cartrige;
-struct PPU;
+#include "bus.h"
 
 class CPU6502
 {
@@ -24,10 +21,17 @@ public:
         STATE_ERROR
     };
 
-    CPU6502(Mode mode);
-    void InjectCartrige(Cartrige*);
-    void Clock();
+    CPU6502(Mode mode, Bus &bus);
+
+    void clock();
     void reset();
+    void IRQ();
+    void NMI();
+
+    State state() const noexcept
+    {
+        return m_state;
+    }
 
 private:
     typedef void (CPU6502::*OpHandler)(void);
@@ -71,23 +75,23 @@ private:
         } pc;
     } m_regs;
 
-    /*** 6502 MEMORY MAP ***/
-    // Internal RAM: 0x0000 ~ 0x2000.
-    // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
-    Storage<0x800> m_ram;
-
     Mode m_mode;
     State m_state;
     int m_period;
-    Cartrige* m_activeCartrige;
-    PPU* m_ppu;
+    Bus &m_bus;
 
-    c6502_byte_t readMem(c6502_word_t addr);
-    void writeMem(c6502_word_t addr, c6502_byte_t val);
+    c6502_byte_t readMem(c6502_word_t addr)
+    {
+        return m_bus.read(addr);
+    }
+
+    void writeMem(c6502_word_t addr, c6502_byte_t val)
+    {
+        m_bus.write(addr, val);
+    }
+
     void updateScreen();
     void testKeys();
-    void IRQ();
-    void NMI();
     c6502_byte_t step();
 
     // Helpers

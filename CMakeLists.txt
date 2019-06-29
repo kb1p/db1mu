@@ -9,7 +9,6 @@ add_compile_options(-Wall -Werror -Wl,--no-undefined)
 
 add_subdirectory("engine")
 add_subdirectory("bin")
-add_subdirectory("gui")
 
 #add_subdirectory("gui")
 file(COPY "test/raw.data" DESTINATION "${CMAKE_BINARY_DIR}/bin")
