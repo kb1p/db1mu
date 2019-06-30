@@ -6,10 +6,7 @@
 class DefaultMapper: public Mapper
 {
 public:
-    DefaultMapper():
-    Mapper(2, 1, false)
-    {
-    }
+    using Mapper::Mapper;
 
     c6502_byte_t read(c6502_word_t addr) override;
 

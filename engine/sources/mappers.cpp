@@ -3,9 +3,9 @@
 c6502_byte_t DefaultMapper::read(c6502_word_t addr)
 {
     if (addr >= 0xC000)
-        return m_pROM[1].Read(addr - 0xC000);
+        return m_pROM[m_nROMs - 1].Read(addr - 0xC000);
     else if (addr >= 0x8000)
-        return m_pROM[0].Read(addr - 0x8000);
+        return m_pROM[m_nROMs - 2].Read(addr - 0x8000);
     else
         throw Exception(Exception::IllegalArgument,
                         "access to RAM (not supported)");
