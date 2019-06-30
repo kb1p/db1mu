@@ -79,6 +79,7 @@ private:
     State m_state;
     int m_period;
     Bus &m_bus;
+    int m_penalty;
 
     c6502_byte_t readMem(c6502_word_t addr)
     {
@@ -92,7 +93,7 @@ private:
 
     void updateScreen();
     void testKeys();
-    c6502_byte_t step();
+    int step();
 
     // Helpers
     // Push to / pop from the stack shorthands
@@ -166,6 +167,10 @@ private:
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
+
+        // Page bound crossing check: if the lsb + index affects msb
+        m_penalty = (al + m_regs.x > 0xFFu) ? 1 : 0;
+
         return (al | (ah << 8)) + m_regs.x;
     }
 
@@ -178,6 +183,9 @@ private:
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
+
+        m_penalty = (al + m_regs.y > 0xFFu) ? 1 : 0;
+
         return (al | (ah << 8)) + m_regs.y;
     }
 
@@ -204,6 +212,9 @@ private:
         const c6502_d_word_t baddr = readMem(m_regs.pc.W++),
                              laddr = readMem(baddr),
                              haddr = readMem((baddr + 1) & 0xFFu);
+
+        m_penalty = (laddr + m_regs.y > 0xFFu) ? 1 : 0;
+
         return (laddr | (haddr << 8)) + m_regs.y;
     }
 
@@ -216,11 +227,11 @@ private:
     {
         if (expression)
         {
-            --m_period;
+            m_penalty = 1;
             c6502_byte_t oldPC_h = (m_regs.pc.W - 1) >> 8;
             m_regs.pc.W += fetchImmOp();
             if (oldPC_h != m_regs.pc.B.h)
-                --m_period;
+                m_penalty = 2;
         }
         else
             ++m_regs.pc.W;

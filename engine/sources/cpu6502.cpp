@@ -19,8 +19,9 @@
 // Tacts per period: { PAL, NTSC }
 static const int TPP[2] = { 59182, 71595 };
 
-// Num. cycles per 6502 instruction
-static const c6502_byte_t CYCLES[256] =
+// Num. cycles per 6502 instruction (not counting the page boundary cross penalty)
+// TODO: check these values
+static const int CYCLES[256] =
 {
     /*0x00*/ 7,6,0,8,3,3,5,5,3,2,2,2,4,4,6,6,
     /*0x10*/ 2,5,0,8,4,4,6,6,2,4,2,7,4,4,7,7,
@@ -139,15 +140,16 @@ void CPU6502::clock()
     }
 }
 
-c6502_byte_t CPU6502::step()
+int CPU6502::step()
 {
     c6502_byte_t opcode = advance();
 
     OpHandler oph = s_ophandlers[opcode];
     if (oph)
     {
+        m_penalty = 0;
         (this->*oph)();
-        return CYCLES[opcode];
+        return CYCLES[opcode] + m_penalty;
     }
     else
     {
