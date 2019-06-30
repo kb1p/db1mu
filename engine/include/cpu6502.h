@@ -97,73 +97,73 @@ private:
 
     // Helpers
     // Push to / pop from the stack shorthands
-    inline void push(c6502_byte_t v)
+    void push(c6502_byte_t v)
     {
         writeMem(0x100 | m_regs.s--, v);
     }
 
-    inline c6502_byte_t pop()
+    c6502_byte_t pop()
     {
         return readMem(0x100 | (++m_regs.s));
     }
 
     // Get the byte PC points to and increase PC by 1
-    inline c6502_byte_t advance()
+    c6502_byte_t advance()
     {
         return readMem(m_regs.pc.W++);
     }
 
     /*** Operand fetching routines ***/
-    inline c6502_byte_t fetchImmOp()
+    c6502_byte_t fetchImmOp()
     {
         return readMem(m_regs.pc.W++);
     }
 
-    inline c6502_word_t fetchZPAddr()
+    c6502_word_t fetchZPAddr()
     {
         return readMem(m_regs.pc.W++);
     }
 
-    inline c6502_byte_t fetchZPOp()
+    c6502_byte_t fetchZPOp()
     {
         return readMem(fetchZPAddr());
     }
 
-    inline c6502_word_t fetchZPXAddr()
+    c6502_word_t fetchZPXAddr()
     {
         const c6502_word_t addr = readMem(m_regs.pc.W++) + m_regs.x;
         return addr > 0xFFu ? 0 : addr;
     }
 
-    inline c6502_byte_t fetchZPXOp()
+    c6502_byte_t fetchZPXOp()
     {
         return readMem(fetchZPXAddr());
     }
 
-    inline c6502_word_t fetchZPYAddr()
+    c6502_word_t fetchZPYAddr()
     {
         const c6502_word_t addr = readMem(m_regs.pc.W++) + m_regs.y;
         return addr > 0xFFu ? 0 : addr;
     }
 
-    inline c6502_byte_t fetchZPYOp()
+    c6502_byte_t fetchZPYOp()
     {
         return readMem(fetchZPYAddr());
     }
 
-    inline c6502_word_t fetchABSAddr()
+    c6502_word_t fetchABSAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
         return al | (ah << 8);
     }
 
-    inline c6502_byte_t fetchABSOp()
+    c6502_byte_t fetchABSOp()
     {
         return readMem(fetchABSAddr());
     }
 
-    inline c6502_word_t fetchABXAddr()
+    c6502_word_t fetchABXAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
@@ -174,12 +174,12 @@ private:
         return (al | (ah << 8)) + m_regs.x;
     }
 
-    inline c6502_byte_t fetchABXOp()
+    c6502_byte_t fetchABXOp()
     {
         return readMem(fetchABXAddr());
     }
 
-    inline c6502_word_t fetchABYAddr()
+    c6502_word_t fetchABYAddr()
     {
         const c6502_word_t al = readMem(m_regs.pc.W++),
                            ah = readMem(m_regs.pc.W++);
@@ -189,12 +189,12 @@ private:
         return (al | (ah << 8)) + m_regs.y;
     }
 
-    inline c6502_byte_t fetchABYOp()
+    c6502_byte_t fetchABYOp()
     {
         return readMem(fetchABYAddr());
     }
 
-    inline c6502_word_t fetchINXAddr()
+    c6502_word_t fetchINXAddr()
     {
         const c6502_word_t baddr = (readMem(m_regs.pc.W++) + m_regs.x) & 0xFFu,
                            laddr = readMem(baddr),
@@ -202,12 +202,12 @@ private:
         return laddr | (haddr << 8);
     }
 
-    inline c6502_byte_t fetchINXOp()
+    c6502_byte_t fetchINXOp()
     {
         return readMem(fetchINXAddr());
     }
 
-    inline c6502_word_t fetchINYAddr()
+    c6502_word_t fetchINYAddr()
     {
         const c6502_d_word_t baddr = readMem(m_regs.pc.W++),
                              laddr = readMem(baddr),
@@ -218,18 +218,19 @@ private:
         return (laddr | (haddr << 8)) + m_regs.y;
     }
 
-    inline c6502_byte_t fetchINYOp()
+    c6502_byte_t fetchINYOp()
     {
         return readMem(fetchINYAddr());
     }
 
-    inline void branchIF(bool expression)
+    void branchIF(bool expression)
     {
         if (expression)
         {
             m_penalty = 1;
-            c6502_byte_t oldPC_h = (m_regs.pc.W - 1) >> 8;
-            m_regs.pc.W += fetchImmOp();
+            const c6502_byte_t oldPC_h = (m_regs.pc.W - 1) >> 8;
+            const auto dis = static_cast<c6502_reldis_t>(fetchImmOp());
+            m_regs.pc.W = static_cast<c6502_word_t>(static_cast<int>(m_regs.pc.W) + dis);
             if (oldPC_h != m_regs.pc.B.h)
                 m_penalty = 2;
         }
