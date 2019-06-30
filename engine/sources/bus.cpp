@@ -25,7 +25,6 @@ void Bus::generateNMI()
 // Memory request dispatching functions
 c6502_byte_t Bus::read(c6502_word_t addr)
 {
-    Log::v("Memory read at %X", addr);
     switch (addr >> 13)
     {
         case 0:
@@ -46,7 +45,6 @@ c6502_byte_t Bus::read(c6502_word_t addr)
 
 void Bus::write(c6502_word_t addr, c6502_byte_t val)
 {
-    Log::v("Memory write value %d at %X", val, addr);
     switch (addr >> 13)
     {
         case 0:

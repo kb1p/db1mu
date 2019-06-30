@@ -38,7 +38,7 @@ void Debugger::Reset()
     assert(cpu != nullptr && cpu->state() == CPU6502::STATE_RUN);
     cpu->reset();
     std::cout << " < S T A R T >\n";
-    m_stepBreak = true;
+    // m_stepBreak = true;
 }
 
 void Debugger::Interact()
@@ -47,7 +47,7 @@ void Debugger::Interact()
     DebugCommand cmd;
     do {
         auto cpu = m_bus.getCPU();
-        std::cout << "(db1mu-dbg)" << std::hex << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc.W) << "> ";
+        std::cout << "(db1mu-dbg)" << std::hex << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc) << "> ";
         std::cin.getline(cmdLine, sizeof(cmdLine));
         if (std::cin.eof()) {
             std::cout << "\n^D\n\n";
@@ -85,7 +85,7 @@ void Debugger::Interact()
 
 void Debugger::InterruptIfNeed()
 {
-    bool needBreak = m_breaks.count(m_bus.getCPU()->m_regs.pc.W) == 1; // todo: Check WATCHs
+    bool needBreak = m_breaks.count(m_bus.getCPU()->m_regs.pc) == 1; // todo: Check WATCHs
     if (needBreak || m_stepBreak)
         Interact();
 }
@@ -110,17 +110,17 @@ void Debugger::PrintCPUState()
     << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.x)
     << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.y)
     << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.s)
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.p.reg)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.p)
     << "|" << "\t"
-    << "|" << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc.W)
+    << "|" << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc)
     << "|" << "\t"
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.c)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.z)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.i)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.d)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.b)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.v)
-    << "|" << std::setfill('0') << std::setw(1) << int(cpu->m_regs.p.flags.n)
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::C>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::Z>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::I>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::D>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::B>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::V>())
+    << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::N>())
     << "|"
     << "\n";
     std::cout << "period = " << std::dec << cpu->m_period << "\n";

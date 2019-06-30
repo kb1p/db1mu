@@ -29,7 +29,7 @@ int main()
         // Find the "raw.data" sample file in the "test" folder
         //loader.loadRawData(in, 0xC000, Mapper::ROM_SIZE);
         // Try and see something like this:
-        loader.loadNES("smb.nes");
+        loader.loadNES("COLOR.NES");
     }
     catch (const Exception &ex)
     {

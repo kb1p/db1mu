@@ -28,7 +28,7 @@ private:
     class Clock<Debugger> m_clock;
 
     std::set<c6502_word_t> m_breaks;
-    bool m_stepBreak = true;
+    bool m_stepBreak = false;
 };
 
 #endif // _DEBUGGER_H
