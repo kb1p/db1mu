@@ -137,7 +137,10 @@ private:
     c6502_byte_t fetchOperand() noexcept
     {
         const auto addr = fetchAddr<M>();
-        return readMem(addr);
+        const auto eo = readMem(addr);
+        TRACE("Operand value = %X", eo);
+
+        return eo;
     }
 
     template <Flag F, bool IS_SET>
@@ -150,6 +153,7 @@ private:
             const c6502_byte_t oldPC_h = hi_byte(m_regs.pc - 1);
             const auto dis = static_cast<c6502_reldis_t>(fetchOperand<AM::IMM>());
             m_regs.pc = static_cast<c6502_word_t>(static_cast<int>(m_regs.pc) + dis);
+            TRACE("Branch to %X", m_regs.pc);
             if (oldPC_h != hi_byte(m_regs.pc))
                 m_penalty = 2;
         }

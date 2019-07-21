@@ -24,96 +24,121 @@ static const int TPP[2] = { 59182, 71595 };
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP>() noexcept
 {
-    return readMem(m_regs.pc++);
+    const c6502_word_t ea = readMem(m_regs.pc++);
+    TRACE("Mode = ZP; addr = %X", ea);
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP_X>() noexcept
 {
-    const c6502_word_t addr = readMem(m_regs.pc++) + m_regs.x;
-    return addr > 0xFFu ? 0 : addr;
+    const c6502_word_t addr = static_cast<c6502_word_t>(readMem(m_regs.pc++)) + m_regs.x;
+    const auto ea = addr > 0xFFu ? 0 : addr;
+    TRACE("Mode = ZP,X; addr = %X", ea);
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP_Y>() noexcept
 {
-    const c6502_word_t addr = readMem(m_regs.pc++) + m_regs.y;
-    return addr > 0xFFu ? 0 : addr;
+    const c6502_word_t addr = static_cast<c6502_word_t>(readMem(m_regs.pc++)) + m_regs.y;
+    const auto ea = addr > 0xFFu ? 0 : addr;
+    TRACE("Mode = ZP,Y; addr = %X", ea);
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ABS>() noexcept
 {
     const c6502_word_t al = readMem(m_regs.pc++),
-                        ah = readMem(m_regs.pc++);
-    return al | (ah << 8);
+                       ah = readMem(m_regs.pc++);
+    const auto ea = al | (ah << 8);
+    TRACE("Mode = ABS; addr = %X", ea);
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ABS_X>() noexcept
 {
     const c6502_word_t al = readMem(m_regs.pc++),
-                        ah = readMem(m_regs.pc++);
+                       ah = readMem(m_regs.pc++);
 
     // Page bound crossing check: if the lsb + index affects msb
     m_penalty = (al + m_regs.x > 0xFFu) ? 1 : 0;
+    const auto ea = (al | (ah << 8)) + m_regs.x;
+    TRACE("Mode = ABS, X; addr = %X", ea);
 
-    return (al | (ah << 8)) + m_regs.x;
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ABS_Y>() noexcept
 {
     const c6502_word_t al = readMem(m_regs.pc++),
-                        ah = readMem(m_regs.pc++);
+                       ah = readMem(m_regs.pc++);
 
     m_penalty = (al + m_regs.y > 0xFFu) ? 1 : 0;
 
-    return (al | (ah << 8)) + m_regs.y;
+    const auto ea = (al | (ah << 8)) + m_regs.y;
+    TRACE("Mode = ABS, Y; addr = %X", ea);
+
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND_X>() noexcept
 {
-    const c6502_word_t baddr = (readMem(m_regs.pc++) + m_regs.x) & 0xFFu,
-                        laddr = readMem(baddr),
-                        haddr = readMem((baddr + 1) & 0xFFu);
-    return laddr | (haddr << 8);
+    const c6502_word_t baddr = (static_cast<c6502_word_t>(readMem(m_regs.pc++)) + m_regs.x) & 0xFFu,
+                       laddr = readMem(baddr),
+                       haddr = readMem((baddr + 1) & 0xFFu);
+    const auto ea = laddr | (haddr << 8);
+    TRACE("Mode = IND, X; addr = %X", ea);
+
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND_Y>() noexcept
 {
     const c6502_d_word_t baddr = readMem(m_regs.pc++),
-                            laddr = readMem(baddr),
-                            haddr = readMem((baddr + 1) & 0xFFu);
+                         laddr = readMem(baddr),
+                         haddr = readMem((baddr + 1) & 0xFFu);
 
     m_penalty = (laddr + m_regs.y > 0xFFu) ? 1 : 0;
 
-    return (laddr | (haddr << 8)) + m_regs.y;
+    const auto ea = (laddr | (haddr << 8)) + m_regs.y;
+    TRACE("Mode = IND, Y; addr = %X", ea);
+
+    return ea;
 }
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND>() noexcept
 {
     auto al = readMem(m_regs.pc++),
-            ah = readMem(m_regs.pc++);
+         ah = readMem(m_regs.pc++);
     const c6502_word_t opaddr = combine(al, ah);
     al = readMem(opaddr);
     ah = readMem(opaddr + 1);
 
-    return combine(al, ah);
+    const auto ea = combine(al, ah);
+    TRACE("Mode = IND; addr = %X", ea);
+
+    return ea;
 }
 
 template <>
 c6502_byte_t CPU6502::fetchOperand<CPU6502::AM::IMM>() noexcept
 {
-    return readMem(m_regs.pc++);
+    const auto eo = readMem(m_regs.pc++);
+    TRACE("Mode = IMM; op. value = %X", eo);
+    return eo;
 }
 
 template <>
 c6502_byte_t CPU6502::fetchOperand<CPU6502::AM::ACC>() noexcept
 {
+    TRACE("Mode = ACC; op. value = %X", m_regs.a);
     return m_regs.a;
 }
 
@@ -128,6 +153,7 @@ void CPU6502::cmd_##name<CPU6502::AM::mode>() noexcept
 
 CMD_DEF(ADC)
 {
+    TRACE("ADC");
     const c6502_word_t op = fetchOperand<MODE>();
     const c6502_word_t r = static_cast<c6502_word_t>(m_regs.a) + getFlag<Flag::C>() + op;
 
@@ -141,6 +167,7 @@ CMD_DEF(ADC)
 
 CMD_DEF(AND)
 {
+    TRACE("AND");
     const auto op = fetchOperand<MODE>();
 
     m_regs.a &= op;
@@ -152,6 +179,7 @@ CMD_DEF(AND)
 CMD_DEF(ASL)
 {
     static_assert(MODE != AM::ACC && MODE != AM::IMM, "Illegal addressing mode for ASL instruction");
+    TRACE("ASL");
     const auto addr = fetchAddr<MODE>();
     auto op = readMem(addr);
 
@@ -166,6 +194,7 @@ CMD_DEF(ASL)
 
 CMD_DEF_SPEC(ASL, ACC)
 {
+    TRACE("ASL A (A = %X)", m_regs.a);
     setFlag<Flag::C>((0x80u & m_regs.a) >> 7);
     m_regs.a <<= 1;
 
@@ -175,21 +204,25 @@ CMD_DEF_SPEC(ASL, ACC)
 
 CMD_DEF(BCC)
 {
+    TRACE("BCC");
     branchIf<Flag::C, false>();
 }
 
 CMD_DEF(BCS)
 {
+    TRACE("BCS");
     branchIf<Flag::C, true>();
 }
 
 CMD_DEF(BEQ)
 {
+    TRACE("BEQ");
     branchIf<Flag::Z, true>();
 }
 
 CMD_DEF(BIT)
 {
+    TRACE("BIT");
     const auto op = fetchOperand<MODE>();
     const auto r = m_regs.a & op;
 
@@ -200,16 +233,19 @@ CMD_DEF(BIT)
 
 CMD_DEF(BMI)
 {
+    TRACE("BMI");
     branchIf<Flag::N, true>();
 }
 
 CMD_DEF(BNE)
 {
+    TRACE("BNE");
     branchIf<Flag::Z, false>();
 }
 
 CMD_DEF(BPL)
 {
+    TRACE("BPL");
     branchIf<Flag::N, false>();
 }
 
@@ -223,42 +259,52 @@ CMD_DEF(BRK)
 
     const auto l = readMem(0xFFFE),
                h = readMem(0xFFFF);
+    const auto ea = combine(l, h);
 
-    m_regs.pc = combine(l, h);
+    TRACE("BRK to %X", ea);
+
+    m_regs.pc = ea;
 }
 
 CMD_DEF(BVC)
 {
+    TRACE("BVC");
     branchIf<Flag::V, false>();
 }
 
 CMD_DEF(BVS)
 {
+    TRACE("BVS");
     branchIf<Flag::V, true>();
 }
 
 CMD_DEF(CLC)
 {
+    TRACE("CLC");
     setFlag<Flag::C>(0);
 }
 
 CMD_DEF(CLD)
 {
+    TRACE("CLD");
     setFlag<Flag::D>(0);
 }
 
 CMD_DEF(CLI)
 {
+    TRACE("CLI");
     setFlag<Flag::I>(0);
 }
 
 CMD_DEF(CLV)
 {
+    TRACE("CLV");
     setFlag<Flag::V>(0);
 }
 
 CMD_DEF(CMP)
 {
+    TRACE("CMP");
     const auto op = fetchOperand<MODE>();
 
     c6502_test_t r = m_regs.a;
@@ -271,6 +317,7 @@ CMD_DEF(CMP)
 
 CMD_DEF(CPX)
 {
+    TRACE("CPX");
     const auto op = fetchOperand<MODE>();
 
     c6502_test_t r = m_regs.x;
@@ -283,6 +330,7 @@ CMD_DEF(CPX)
 
 CMD_DEF(CPY)
 {
+    TRACE("CPY");
     const auto op = fetchOperand<MODE>();
 
     c6502_test_t r = m_regs.y;
@@ -295,6 +343,7 @@ CMD_DEF(CPY)
 
 CMD_DEF(DEC)
 {
+    TRACE("DEC");
     const auto addr = fetchAddr<MODE>();
     const auto op = readMem(addr);
     const auto r = op - 1;
@@ -305,6 +354,7 @@ CMD_DEF(DEC)
 
 CMD_DEF(DEX)
 {
+    TRACE("DEX (X = %X)", m_regs.x);
     m_regs.x--;
     eval_N(m_regs.x);
     eval_Z(m_regs.x);
@@ -312,6 +362,7 @@ CMD_DEF(DEX)
 
 CMD_DEF(DEY)
 {
+    TRACE("DEY (Y = %X)", m_regs.y);
     m_regs.y--;
     eval_N(m_regs.y);
     eval_Z(m_regs.y);
@@ -319,6 +370,7 @@ CMD_DEF(DEY)
 
 CMD_DEF(EOR)
 {
+    TRACE("EOR");
     const auto op = fetchOperand<MODE>();
     m_regs.a ^= op;
     eval_N(m_regs.a);
@@ -327,6 +379,7 @@ CMD_DEF(EOR)
 
 CMD_DEF(INC)
 {
+    TRACE("INC");
     const auto addr = fetchAddr<MODE>();
     const auto op = readMem(addr);
     const auto r = op + 1;
@@ -337,6 +390,7 @@ CMD_DEF(INC)
 
 CMD_DEF(INX)
 {
+    TRACE("INX (X = %X)", m_regs.x);
     m_regs.x++;
     eval_N(m_regs.x);
     eval_Z(m_regs.x);
@@ -344,6 +398,7 @@ CMD_DEF(INX)
 
 CMD_DEF(INY)
 {
+    TRACE("INY (Y = %X)", m_regs.y);
     m_regs.y++;
     eval_N(m_regs.y);
     eval_Z(m_regs.y);
@@ -351,11 +406,14 @@ CMD_DEF(INY)
 
 CMD_DEF(JMP)
 {
-    m_regs.pc = fetchAddr<MODE>();
+    TRACE("JMP");
+    const auto ea = fetchAddr<MODE>();
+    m_regs.pc = ea;
 }
 
 CMD_DEF(JSR)
 {
+    TRACE("JSR");
     const auto where = fetchAddr<MODE>();
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
@@ -364,6 +422,7 @@ CMD_DEF(JSR)
 
 CMD_DEF(LDA)
 {
+    TRACE("LDA");
     const auto op = fetchOperand<MODE>();
     eval_N(op);
     eval_Z(op);
@@ -372,6 +431,7 @@ CMD_DEF(LDA)
 
 CMD_DEF(LDX)
 {
+    TRACE("LDX");
     const auto op = fetchOperand<MODE>();
     eval_N(op);
     eval_Z(op);
@@ -380,6 +440,7 @@ CMD_DEF(LDX)
 
 CMD_DEF(LDY)
 {
+    TRACE("LDY");
     const auto op = fetchOperand<MODE>();
     eval_N(op);
     eval_Z(op);
@@ -389,6 +450,7 @@ CMD_DEF(LDY)
 CMD_DEF(LSR)
 {
     static_assert(MODE != AM::ACC && MODE != AM::IMM, "Illegal addressing mode for LSR instruction");
+    TRACE("LSR");
     const auto addr = fetchAddr<MODE>();
     auto op = readMem(addr);
     setFlag<Flag::C>(op & 1u);
@@ -400,6 +462,7 @@ CMD_DEF(LSR)
 
 CMD_DEF_SPEC(LSR, ACC)
 {
+    TRACE("LSR A (A = %X)", m_regs.a);
     setFlag<Flag::C>(m_regs.a & 1u);
     m_regs.a >>= 1;
     eval_N(m_regs.a);
@@ -408,10 +471,12 @@ CMD_DEF_SPEC(LSR, ACC)
 
 CMD_DEF(NOP)
 {
+    TRACE("NOP");
 }
 
 CMD_DEF(ORA)
 {
+    TRACE("ORA");
     const auto op = fetchOperand<MODE>();
     m_regs.a |= op;
     eval_N(m_regs.a);
@@ -420,16 +485,19 @@ CMD_DEF(ORA)
 
 CMD_DEF(PHA)
 {
+    TRACE("PHA");
     push(m_regs.a);
 }
 
 CMD_DEF(PHP)
 {
+    TRACE("PHP");
     push(m_regs.p);
 }
 
 CMD_DEF(PLA)
 {
+    TRACE("PLA");
     m_regs.a = pop();
     eval_N(m_regs.a);
     eval_Z(m_regs.a);
@@ -437,12 +505,14 @@ CMD_DEF(PLA)
 
 CMD_DEF(PLP)
 {
+    TRACE("PLP");
     m_regs.p = pop();
 }
 
 CMD_DEF(ROL)
 {
     static_assert(MODE != AM::ACC && MODE != AM::IMM, "Illegal addressing mode for ROL instruction");
+    TRACE("ROL");
     const auto addr = fetchAddr<MODE>();
     c6502_word_t op = readMem(addr);
     op <<= 1;
@@ -456,6 +526,7 @@ CMD_DEF(ROL)
 
 CMD_DEF_SPEC(ROL, ACC)
 {
+    TRACE("ROL A (A = %X)", m_regs.a);
     c6502_word_t op = m_regs.a;
     op <<= 1;
     op |= getFlag<Flag::C>();
@@ -468,6 +539,7 @@ CMD_DEF_SPEC(ROL, ACC)
 CMD_DEF(ROR)
 {
     static_assert(MODE != AM::ACC && MODE != AM::IMM, "Illegal addressing mode for ROR instruction");
+    TRACE("ROR");
     const auto addr = fetchAddr<MODE>();
     c6502_word_t op = readMem(addr);
     if (getFlag<Flag::C>() != 0)
@@ -482,6 +554,7 @@ CMD_DEF(ROR)
 
 CMD_DEF_SPEC(ROR, ACC)
 {
+    TRACE("ROR A (A = %X)", m_regs.a);
     c6502_word_t op = m_regs.a;
     if (getFlag<Flag::C>() != 0)
         op |= 0x100u;
@@ -494,6 +567,7 @@ CMD_DEF_SPEC(ROR, ACC)
 
 CMD_DEF(RTI)
 {
+    TRACE("RTI");
     m_regs.p = pop();
     const auto ral = pop(),
                rah = pop();
@@ -502,6 +576,7 @@ CMD_DEF(RTI)
 
 CMD_DEF(RTS)
 {
+    TRACE("RTS");
     const auto ral = pop(),
                rah = pop();
     m_regs.pc = combine(ral, rah);
@@ -509,6 +584,7 @@ CMD_DEF(RTS)
 
 CMD_DEF(SBC)
 {
+    TRACE("SBC");
     const c6502_word_t op = fetchOperand<MODE>();
     const c6502_word_t borrow = getFlag<Flag::C>();
     const auto r = static_cast<c6502_word_t>(m_regs.a) - op - borrow;
@@ -522,36 +598,43 @@ CMD_DEF(SBC)
 
 CMD_DEF(SEC)
 {
+    TRACE("SEC");
     setFlag<Flag::C>(1u);
 }
 
 CMD_DEF(SED)
 {
+    TRACE("SED");
     setFlag<Flag::D>(1u);
 }
 
 CMD_DEF(SEI)
 {
+    TRACE("SEI");
     setFlag<Flag::I>(1u);
 }
 
 CMD_DEF(STA)
 {
+    TRACE("STA");
     writeMem(fetchAddr<MODE>(), m_regs.a);
 }
 
 CMD_DEF(STX)
 {
+    TRACE("STX");
     writeMem(fetchAddr<MODE>(), m_regs.x);
 }
 
 CMD_DEF(STY)
 {
+    TRACE("STY");
     writeMem(fetchAddr<MODE>(), m_regs.y);
 }
 
 CMD_DEF(TAX)
 {
+    TRACE("TAX");
     eval_N(m_regs.a);
     eval_Z(m_regs.a);
     m_regs.x = m_regs.a;
@@ -559,6 +642,7 @@ CMD_DEF(TAX)
 
 CMD_DEF(TAY)
 {
+    TRACE("TAY");
     eval_N(m_regs.a);
     eval_Z(m_regs.a);
     m_regs.y = m_regs.a;
@@ -566,6 +650,7 @@ CMD_DEF(TAY)
 
 CMD_DEF(TSX)
 {
+    TRACE("TSX");
     eval_N(m_regs.s);
     eval_Z(m_regs.s);
     m_regs.x = m_regs.s;
@@ -573,6 +658,7 @@ CMD_DEF(TSX)
 
 CMD_DEF(TXA)
 {
+    TRACE("TXA");
     eval_N(m_regs.x);
     eval_Z(m_regs.x);
     m_regs.a = m_regs.x;
@@ -580,11 +666,13 @@ CMD_DEF(TXA)
 
 CMD_DEF(TXS)
 {
+    TRACE("TXS");
     m_regs.s = m_regs.x;
 }
 
 CMD_DEF(TYA)
 {
+    TRACE("TYA");
     eval_N(m_regs.y);
     eval_Z(m_regs.y);
     m_regs.a = m_regs.y;
