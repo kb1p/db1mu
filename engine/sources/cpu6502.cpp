@@ -100,9 +100,9 @@ c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND_X>() noexcept
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND_Y>() noexcept
 {
-    const c6502_d_word_t baddr = readMem(m_regs.pc++),
-                         laddr = readMem(baddr),
-                         haddr = readMem((baddr + 1) & 0xFFu);
+    const c6502_word_t baddr = readMem(m_regs.pc++),
+                       laddr = readMem(baddr),
+                       haddr = readMem((baddr + 1) & 0xFFu);
 
     m_penalty = (laddr + m_regs.y > 0xFFu) ? 1 : 0;
 
@@ -307,12 +307,12 @@ CMD_DEF(CMP)
     TRACE("CMP");
     const auto op = fetchOperand<MODE>();
 
-    c6502_test_t r = m_regs.a;
-    r -= static_cast<c6502_test_t>(op);
+    int r = m_regs.a;
+    r -= op;
 
-    setFlag<Flag::C>(m_regs.a < op ? 1 : 0);
-    eval_Z(lo_byte(r));
-    eval_N(lo_byte(r));
+    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
 }
 
 CMD_DEF(CPX)
@@ -320,12 +320,12 @@ CMD_DEF(CPX)
     TRACE("CPX");
     const auto op = fetchOperand<MODE>();
 
-    c6502_test_t r = m_regs.x;
-    r -= static_cast<c6502_test_t>(op);
+    int r = m_regs.x;
+    r -= op;
 
-    setFlag<Flag::C>(m_regs.x < op ? 1 : 0);
-    eval_Z(lo_byte(r));
-    eval_N(lo_byte(r));
+    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
 }
 
 CMD_DEF(CPY)
@@ -333,12 +333,12 @@ CMD_DEF(CPY)
     TRACE("CPY");
     const auto op = fetchOperand<MODE>();
 
-    c6502_test_t r = m_regs.y;
-    r -= static_cast<c6502_test_t>(op);
+    int r = m_regs.y;
+    r -= op;
 
-    setFlag<Flag::C>(m_regs.y < op ? 1 : 0);
-    eval_Z(lo_byte(r));
-    eval_N(lo_byte(r));
+    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
 }
 
 CMD_DEF(DEC)
@@ -585,14 +585,15 @@ CMD_DEF(RTS)
 CMD_DEF(SBC)
 {
     TRACE("SBC");
-    const c6502_word_t op = fetchOperand<MODE>();
-    const c6502_word_t borrow = getFlag<Flag::C>();
-    const auto r = static_cast<c6502_word_t>(m_regs.a) - op - borrow;
-    setFlag<Flag::V>(((m_regs.a ^ r) & 0x80u) != 0 && ((m_regs.a ^ op) & 0x80u) != 0);
-    setFlag<Flag::C>(static_cast<c6502_byte_t>(m_regs.a) < op + borrow ? 1u : 0u);
-    const auto br = lo_byte(r);
+    const int op = fetchOperand<MODE>(),
+              borrow = getFlag<Flag::C>() ^ 1;
+    const int r = static_cast<int>(m_regs.a) - op - borrow;
+    const auto br = static_cast<c6502_byte_t>(r & 0xFF);
     eval_N(br);
     eval_Z(br);
+    setFlag<Flag::V>(((m_regs.a ^ r) & 0x80) != 0 && ((m_regs.a ^ op) & 0x80) != 0 ? 1 : 0);
+    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
+
     m_regs.a = br;
 }
 
