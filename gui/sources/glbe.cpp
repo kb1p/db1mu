@@ -13,3 +13,7 @@ GLRenderingBackend::GLRenderingBackend(QOpenGLFunctions *glFunctions):
             throw Exception { Exception::IllegalOperation, "required OpenGL features are not supported" };
 }
 
+void GLRenderingBackend::setup(const float *pal)
+{
+}
+

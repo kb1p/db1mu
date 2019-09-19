@@ -16,12 +16,8 @@
 class CPU6502
 {
     friend class Debugger;
-public:
-    enum Mode
-    {
-        PAL = 0, NTSC
-    };
 
+public:
     enum State
     {
         STATE_HALTED,

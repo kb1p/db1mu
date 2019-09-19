@@ -5,13 +5,14 @@
 
 #include <QOpenGLFunctions>
 
-class GLRenderingBackend: public RenderingBackend
+class GLRenderingBackend: public PPU::RenderingBackend
 {
     QOpenGLFunctions *const m_gl;
-    GLuint m_spriteAtlas;
 
 public:
     explicit GLRenderingBackend(QOpenGLFunctions *glFunctions);
+
+    void setup(const float *pal);
 
 };
 
