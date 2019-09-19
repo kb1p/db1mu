@@ -18,9 +18,6 @@
 // TRACE shorthand for branching operations
 #define TRACE_B(name, c) TRACE(name " cond=%s", (c) ? "true" : "false")
 
-// Tacts per period: { PAL, NTSC }
-static const int TPP[2] = { 59182, 71595 };
-
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP>() noexcept
 {
@@ -896,9 +893,8 @@ void CPU6502::initOpHandlers() noexcept
 }
 
 /*** CPU class implementation ***/
-CPU6502::CPU6502(Mode mode, Bus &bus)
-    : m_mode(mode)
-    , m_state(STATE_HALTED)
+CPU6502::CPU6502(Bus &bus)
+    : m_state(STATE_HALTED)
     , m_period(0)
     , m_bus { bus }
 {
@@ -928,7 +924,8 @@ void CPU6502::reset()
     const auto pcl = readMem(0xFFFC),
                pch = readMem(0xFFFD);
     m_regs.pc = combine(pcl, pch);
-    m_period = TPP[m_mode];
+    m_period = m_bus.getMode() == OutputMode::PAL ? 59182 : 71595;
+
     m_state = STATE_RUN;
 }
 
@@ -975,7 +972,7 @@ void CPU6502::clock()
         m_period -= step();
         if (m_period <= 0)
         {
-            m_period += TPP[m_mode];
+            m_period += m_bus.getMode() == OutputMode::PAL ? 59182 : 71595;
             updateScreen();
             testKeys();
             NMI();

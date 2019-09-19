@@ -7,6 +7,11 @@ class CPU6502;
 class PPU;
 class Cartrige;
 
+enum class OutputMode
+{
+    PAL, NTSC
+};
+
 /*!
  * System bus, controls communication between all units, manages main memory.
  * Object of this class must be created prior to everything else.
@@ -23,7 +28,14 @@ class Bus
     PPU *m_pPPU = nullptr;
     Cartrige *m_pCart = nullptr;
 
+    const OutputMode m_mode;
+
 public:
+    explicit Bus(OutputMode m):
+        m_mode { m }
+    {
+    }
+
     void setCPU(CPU6502 *pCPU) noexcept
     {
         assert(pCPU != nullptr);
@@ -48,6 +60,11 @@ public:
         return m_pPPU;
     }
 
+    OutputMode getMode() const noexcept
+    {
+        return m_mode;
+    }
+
     void injectCartrige(Cartrige *cart);
 
     Cartrige *getCartrige() const noexcept
@@ -58,6 +75,9 @@ public:
     // Interrupts dispatching functions
     void generateIRQ();
     void generateNMI();
+
+    void updateScreen();
+    void testKeys();
 
     // Memory request dispatching functions
     c6502_byte_t read(c6502_word_t addr);

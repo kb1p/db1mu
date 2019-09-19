@@ -16,12 +16,8 @@
 class CPU6502
 {
     friend class Debugger;
-public:
-    enum Mode
-    {
-        PAL = 0, NTSC
-    };
 
+public:
     enum State
     {
         STATE_HALTED,
@@ -29,7 +25,7 @@ public:
         STATE_ERROR
     };
 
-    CPU6502(Mode mode, Bus &bus);
+    CPU6502(Bus &bus);
 
     void clock();
     void reset();
@@ -55,7 +51,6 @@ private:
         c6502_word_t pc;
     } m_regs;
 
-    Mode m_mode;
     State m_state;
     int m_period;
     Bus &m_bus;

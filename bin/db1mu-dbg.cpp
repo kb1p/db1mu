@@ -16,8 +16,8 @@ int main()
     logCfg.filter = Log::LEVEL_VERBOSE;
     logCfg.autoFlush = true;
 
-    Bus systemBus;
-    CPU6502 cpu { CPU6502::NTSC, systemBus };
+    Bus systemBus { OutputMode::NTSC };
+    CPU6502 cpu { systemBus };
     systemBus.setCPU(&cpu);
     PPU ppu { systemBus, nullptr };
     systemBus.setPPU(&ppu);
