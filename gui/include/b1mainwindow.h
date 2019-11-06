@@ -45,7 +45,10 @@ public:
     ~b1MainWindow();
 
 protected:
-    virtual void closeEvent ( QCloseEvent *e );
+    void closeEvent(QCloseEvent *e) override;
+
+protected Q_SLOTS:
+    void openROM();
 
 private:
     Ui::b1MainWindow* ui;

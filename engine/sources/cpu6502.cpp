@@ -908,14 +908,6 @@ CPU6502::CPU6502(Bus &bus)
     }
 }
 
-void CPU6502::updateScreen()
-{
-}
-
-void CPU6502::testKeys()
-{
-}
-
 void CPU6502::reset()
 {
     m_regs.a = m_regs.x = m_regs.y = 0;
@@ -924,8 +916,8 @@ void CPU6502::reset()
     const auto pcl = readMem(0xFFFC),
                pch = readMem(0xFFFD);
     m_regs.pc = combine(pcl, pch);
-    m_period = m_bus.getMode() == OutputMode::PAL ? 59182 : 71595;
 
+    m_period = 0;
     m_state = STATE_RUN;
 }
 
@@ -965,22 +957,21 @@ void CPU6502::NMI()
     m_period -= 7;
 }
 
-void CPU6502::clock()
+void CPU6502::runFrame() noexcept
 {
-    if (m_state == STATE_RUN)
+    m_period += m_bus.getMode() == OutputMode::PAL ? 35469 : 29830;
+    while (m_period > 0)
     {
-        m_period -= step();
-        if (m_period <= 0)
+        switch (m_state)
         {
-            m_period += m_bus.getMode() == OutputMode::PAL ? 59182 : 71595;
-            updateScreen();
-            testKeys();
-            NMI();
+            case STATE_RUN:
+                m_period -= step();
+                break;
+            case STATE_ERROR:
+                Log::e("Unexpected CPU state (%d)", m_state);
+            case STATE_HALTED:
+                return;
         }
-    }
-    else
-    {
-        Log::e("Unexpected CPU state (%d)", m_state);
     }
 }
 

@@ -38,12 +38,6 @@ void Bus::generateNMI()
     m_pCPU->NMI();
 }
 
-void Bus::updateScreen()
-{
-    assert(m_pPPU != nullptr);
-    m_pPPU->update();
-}
-
 void Bus::testKeys()
 {
 }
@@ -61,8 +55,9 @@ c6502_byte_t Bus::read(c6502_word_t addr)
             return m_pPPU->readRegister(addr & 0x0F);
         case 2:
             // APU
-            assert(false && "APU is not yet implemented");
-            break;
+            //assert(false && "APU is not yet implemented");
+            //break;
+            return 0;
         default:
             // Read from the cartridge
             return m_pCart->read(addr);
@@ -96,7 +91,7 @@ void Bus::write(c6502_word_t addr, c6502_byte_t val)
             else
             {
                 // To APU registers
-                assert(false && "APU is not yet implemented");
+                //assert(false && "APU is not yet implemented");
             }
             break;
         default:

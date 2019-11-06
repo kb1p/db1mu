@@ -76,7 +76,6 @@ public:
     void generateIRQ();
     void generateNMI();
 
-    void updateScreen();
     void testKeys();
 
     // Memory request dispatching functions

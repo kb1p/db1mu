@@ -27,7 +27,8 @@ public:
 
     CPU6502(Bus &bus);
 
-    void clock();
+    void runFrame() noexcept;
+
     void reset();
     void IRQ();
     void NMI();
@@ -92,8 +93,6 @@ private:
         m_bus.write(addr, val);
     }
 
-    void updateScreen();
-    void testKeys();
     int step();
 
     // Helpers

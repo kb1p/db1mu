@@ -23,7 +23,7 @@ void Debugger::Clock()
     InterruptIfNeed();
     auto cpu = m_bus.getCPU();
     assert(cpu != nullptr && cpu->state() == CPU6502::STATE_RUN);
-    cpu->clock();
+    cpu->step();
 }
 
 void Debugger::Start(long freq)

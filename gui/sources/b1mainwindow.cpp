@@ -33,6 +33,7 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QFileDialog>
 
 b1MainWindow::b1MainWindow()
 {
@@ -48,13 +49,13 @@ b1MainWindow::~b1MainWindow()
     delete ui;
 }
 
-void b1MainWindow::closeEvent ( QCloseEvent *e )
+void b1MainWindow::closeEvent(QCloseEvent *e)
 {
-    int r = QMessageBox::question ( this,
-                                    tr ( "Confirm exit" ),
-                                    tr ( "Are you sure want to quit?" ),
-                                    QMessageBox::Yes | QMessageBox::No );
-    if ( r == QMessageBox::Yes )
+    const auto r = QMessageBox::question(this,
+                                         tr("Confirm exit"),
+                                         tr("Are you sure want to quit?"),
+                                         QMessageBox::Yes | QMessageBox::No);
+    if (r == QMessageBox::Yes)
     {
         e->accept();
         //foo();
@@ -63,5 +64,15 @@ void b1MainWindow::closeEvent ( QCloseEvent *e )
     {
         e->ignore();
     }
+}
+
+void b1MainWindow::openROM()
+{
+    const auto fn = QFileDialog::getOpenFileName(this,
+                                                 tr("Select ROM file"),
+                                                 tr("."),
+                                                 tr("NES ROM images (*.nes)"));
+    if (!fn.isNull())
+        m_screen->loadROM(fn);
 }
 

@@ -32,7 +32,6 @@ public:
         RenderingBackend &operator=(RenderingBackend&&) = delete;
 
         virtual void setBackground(c6502_byte_t color) = 0;
-        virtual void setTransparent(c6502_byte_t color) = 0;
         virtual void setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64]) = 0;
         virtual void draw() = 0;
 
@@ -118,7 +117,7 @@ private:
 
     void readCharacter(c6502_word_t ind,
                        c6502_byte_t (&sym)[64],
-                       const bool sprite,
+                       const c6502_word_t baseAddr,
                        const bool fliph,
                        const bool flipv) noexcept;
 

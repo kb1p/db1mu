@@ -4,7 +4,7 @@ file(GLOB sources_cpp "sources/*.cpp")
 FIND_PACKAGE(BISON REQUIRED)
 FIND_PACKAGE(FLEX REQUIRED)
 
-option(CPU_TRACE "Enable / disable tracing of currently executed CPU command" ON)
+option(CPU_TRACE "Enable / disable tracing of currently executed CPU command" OFF)
 
 BISON_TARGET(dbg_cmd_parser sources/dbg_cmd.y ${CMAKE_CURRENT_BINARY_DIR}/dbg_cmd.y.cpp)
 FLEX_TARGET(dbg_cmd_lexer sources/dbg_cmd.l  ${CMAKE_CURRENT_BINARY_DIR}/dbg_cmd.l.cpp)

@@ -163,7 +163,8 @@ void PPU::buildImage() noexcept
                            inda = (py / 32) * 8 + px / 32;    // index in attributes area
 
                 // Read color information from character area
-                readCharacter(indc, sym, false, false, false);
+                const auto charNum = readVRAM(pageAddr + indc);
+                readCharacter(charNum, sym, m_baBkgnd, false, false);
 
                 // Read color information from attribute area
                 const auto clrGrp = readVRAM(pageAddr + 960 + inda);
@@ -182,10 +183,9 @@ void PPU::buildImage() noexcept
 
     if (m_spritesVisible)
     {
-        // Render high priority sprites
-        // Palette: 0x3F10
-        for (c6502_word_t i = 0; i < 64u; i++)
+        for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
+            const auto i = (63u - ns) * 4u;
             const auto y = m_spriteMem.Read(i),
                        nChar = m_spriteMem.Read(i + 1),
                        attrs = m_spriteMem.Read(i + 2),
@@ -195,7 +195,9 @@ void PPU::buildImage() noexcept
                              RenderingBackend::Layer::BEHIND;
             const c6502_byte_t clrHi = attrs & 0b11u;
 
-            readCharacter(nChar, sym, true, test<6>(attrs), test<7>(attrs));
+            // TODO: handle 8x16 sprites
+
+            readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
 
             expandSymbol(clrHi, PAL_SPR);
 
@@ -209,11 +211,11 @@ void PPU::buildImage() noexcept
 
 void PPU::readCharacter(c6502_word_t ind,
                         c6502_byte_t (&sym)[64],
-                        const bool sprite,
+                        const c6502_word_t baseAddr,
                         const bool fliph,
                         const bool flipv) noexcept
 {
-    const auto ba = (sprite ? m_baSprites : m_baBkgnd) + ind * 16;
+    const auto ba = baseAddr + ind * 16;
     for (c6502_word_t i = 0; i < 8; i++)
     {
         const auto r0 = readVRAM(ba + i),
