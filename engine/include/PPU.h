@@ -47,6 +47,7 @@ public:
         m_bus { bus },
         m_pBackend { rbe }
     {
+        assert(m_pBackend != nullptr);
         m_pBackend->setPPUInstance(this);
     }
     

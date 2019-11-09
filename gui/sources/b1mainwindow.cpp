@@ -28,17 +28,23 @@
 
 #include "b1mainwindow.h"
 #include "ui_b1mainwindow.h"
-#include "b1.h"
+#include "log.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <iostream>
 
 b1MainWindow::b1MainWindow()
 {
     ui = new Ui::b1MainWindow;
     ui->setupUi ( this );
+
+    auto &logCfg = Log::instance().config();
+    logCfg.pOutput = &std::cout;
+    logCfg.filter = Log::LEVEL_STD;
+    logCfg.autoFlush = true;
 
     m_screen = new ScreenWidget(this);
     setCentralWidget(m_screen);
