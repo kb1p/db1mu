@@ -23,6 +23,16 @@ class Bus
     // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
     Storage<0x800> m_ram;
 
+    // Video memory, separate address space
+    Storage<0x2000> m_vram;
+
+    // Sprite memory, addressed by sprite index (0..63)
+    Storage<256> m_spriteMem;
+
+    // Palettes location in VROM
+    static constexpr c6502_word_t PAL_BG = 0x3F00u,
+                                  PAL_SPR = 0x3F10u;
+
     // Modules
     CPU6502 *m_pCPU = nullptr;
     PPU *m_pPPU = nullptr;
@@ -78,9 +88,23 @@ public:
 
     void testKeys();
 
-    // Memory request dispatching functions
-    c6502_byte_t read(c6502_word_t addr);
-    void write(c6502_word_t addr, c6502_byte_t val);
+    // CPU address space memory requests dispatching functions
+    c6502_byte_t readMem(c6502_word_t addr);
+    void writeMem(c6502_word_t addr, c6502_byte_t val);
+
+    // PPU address space access functions
+    c6502_byte_t readVideoMem(c6502_word_t addr) const noexcept;
+    void writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept;
+
+    c6502_byte_t readSpriteMem(c6502_word_t addr) const noexcept
+    {
+        return m_spriteMem.Read(addr);
+    }
+
+    void writeSpriteMem(c6502_word_t addr, c6502_byte_t val) noexcept
+    {
+        m_spriteMem.Write(addr, val);
+    }
 };
 
 #endif

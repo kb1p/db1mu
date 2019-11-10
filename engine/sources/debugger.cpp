@@ -129,7 +129,7 @@ void Debugger::PrintCPUState()
 
 void Debugger::PrintMem(c6502_word_t ptr)
 {
-    std::cout << std::hex << "0x" << std::setfill('0') << std::setw(4) <<  ptr << ": " << c6502_word_t(m_bus.read(ptr)) << "\n";
+    std::cout << std::hex << "0x" << std::setfill('0') << std::setw(4) <<  ptr << ": " << c6502_word_t(m_bus.readMem(ptr)) << "\n";
 }
 
 void Debugger::PrintMem(c6502_word_t ptr, c6502_word_t len)
@@ -140,7 +140,7 @@ void Debugger::PrintMem(c6502_word_t ptr, c6502_word_t len)
             std::cout << "\n";
         else if (i % 8 == 0)
             std::cout << "   ";
-        std::cout << std::setfill('0') << std::setw(2) << c6502_word_t(m_bus.read(ptr + i)) << " ";
+        std::cout << std::setfill('0') << std::setw(2) << c6502_word_t(m_bus.readMem(ptr + i)) << " ";
     }
     std::cout << "\n";
 }

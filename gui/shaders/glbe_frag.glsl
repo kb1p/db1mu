@@ -20,14 +20,13 @@ int point(float x)
 vec4 color256(int x)
 {
     const float st = 1.0 / 3.0;
-    float lc = float(imod(x, 4));
     vec4 clr = vec4(0.0);
-    clr.b = st * lc;
+    clr.b = st * float(imod(x, 4));
     clr.g = st * float(imod(x / 4, 4));
     clr.r = st * float(imod(x / 16, 4));
 
-    // if lower 2 bits are zero, this is transparent pixel
-    clr.a = step(1.0, lc);
+    // if highmost 2 bits are zero, this is transparent pixel
+    clr.a = step(1.0, float(imod(x / 64, 4)));
     return clr;
 }
 

@@ -85,12 +85,12 @@ private:
 
     c6502_byte_t readMem(c6502_word_t addr) noexcept
     {
-        return m_bus.read(addr);
+        return m_bus.readMem(addr);
     }
 
     void writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
     {
-        m_bus.write(addr, val);
+        m_bus.writeMem(addr, val);
     }
 
     int step();

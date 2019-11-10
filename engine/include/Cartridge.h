@@ -105,16 +105,20 @@ public:
     Mapper(int nROMs, int nVROMs, int nRAMs);
     virtual ~Mapper();
 
-    void addROMBank(const c6502_byte_t *p);
-    void addVROMBank(const c6502_byte_t *p);
+    void setROMBank(int n, const c6502_byte_t *p);
+    void setVROMBank(int n, const c6502_byte_t *p);
 
-    virtual c6502_byte_t read(c6502_word_t addr) = 0;
+    virtual c6502_byte_t readROM(c6502_word_t addr) = 0;
+
+    virtual c6502_byte_t readRAM(c6502_word_t addr) = 0;
+
+    virtual c6502_byte_t readVROM(c6502_word_t addr) = 0;
 
     /* N.B.: some addresses control mapper behaviour (i. e.
      * force bank switching) so, despite the memory itself is r/o,
      * this operation with the mapper is legal.
      */
-    virtual void write(c6502_word_t addr, c6502_byte_t val) = 0;
+    virtual void writeRAM(c6502_word_t addr, c6502_byte_t val) = 0;
 
     /* TODO: PPU has an addressing space separate from that of CPU,
      * add routines for PPU reading / writing, e. g. readPPU(),
@@ -123,7 +127,7 @@ public:
 
 protected:
     const int m_nROMs, m_nVROMs, m_nRAMs;
-    int m_curROM = 0, m_curVROM = 0;
+
     ROM_BANK *m_pROM = nullptr;
     VROM_BANK *m_pVROM = nullptr;
     RAM_BANK *m_pRAM = nullptr;
@@ -199,20 +203,6 @@ public:
     {
         assert(m_pMapper);
         return m_pMapper->m_nVROMs;
-    }
-
-    c6502_byte_t read(c6502_word_t addr) const
-    {
-        assert(m_pMapper);
-        assert(addr >= 0x6000);
-        return m_pMapper->read(addr);
-    }
-
-    void write(c6502_word_t addr, c6502_byte_t val)
-    {
-        assert(m_pMapper);
-        assert(addr >= 0x6000);
-        m_pMapper->write(addr, val);
     }
 };
 

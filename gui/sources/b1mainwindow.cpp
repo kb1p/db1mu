@@ -43,7 +43,7 @@ b1MainWindow::b1MainWindow()
 
     auto &logCfg = Log::instance().config();
     logCfg.pOutput = &std::cout;
-    logCfg.filter = Log::LEVEL_STD;
+    logCfg.filter = Log::LEVEL_DEBUG;
     logCfg.autoFlush = true;
 
     m_screen = new ScreenWidget(this);

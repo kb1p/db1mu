@@ -16,7 +16,7 @@ constexpr bool test(c6502_byte_t v) noexcept
 c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
 {
     Log::v("Reading PPU register #%d", n);
-    
+
     c6502_byte_t rv = 0;
     switch (n)
     {
@@ -27,14 +27,17 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
                 rv |= bit<5>();
             if (m_sprite0)
                 rv |= bit<6>();
-            if (!m_busy)
+            if (m_vblank)
+            {
                 rv |= bit<7>();
+                m_vblank = false;
+            }
             break;
         case SPRMEM_DATA:
-            rv = m_spriteMem.Read(m_sprmemAddr++);
+            rv = m_bus.readSpriteMem(m_sprmemAddr++);
             break;
         case VIDMEM_DATA:
-            rv = readVRAM(m_vramAddr);
+            rv = m_bus.readVideoMem(m_vramAddr);
             if (!m_vramReadError)
                 m_vramAddr += m_addrIncr;
             else
@@ -83,15 +86,17 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             m_sprmemAddr = val;
             break;
         case SPRMEM_DATA:
-            m_spriteMem.Write(m_sprmemAddr++, val);
+            m_bus.writeSpriteMem(m_sprmemAddr++, val);
             break;
         case VIDMEM_ADDR:
             m_vramAddr <<= 8;
             m_vramAddr = (m_vramAddr & 0xFF00u) | (val & 0xFFu);
-            m_vramReadError = true;
+
+            // Read error doesn't happen during palette access
+            m_vramReadError = m_vramAddr < 0x3F00u || m_vramAddr >= 0x3F20u;
             break;
         case VIDMEM_DATA:
-            writeVRAM(m_vramAddr, val);
+            m_bus.writeVideoMem(m_vramAddr, val);
             m_vramAddr += m_addrIncr;
             break;
         case SCROLL:
@@ -107,9 +112,9 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
 
 void PPU::update() noexcept
 {
-    m_busy = true;
+    m_vblank = false;
     buildImage();
-    m_busy = false;
+    m_vblank = true;
 
     if (m_enableNMI)
         m_bus.generateNMI();
@@ -117,7 +122,7 @@ void PPU::update() noexcept
 
 void PPU::buildImage() noexcept
 {
-    static const c6502_word_t LAYOUT[2][2] = {
+    static const c6502_word_t SCROLL_LAYOUT[2][2] = {
         { 0x2800u, 0x2C00u },
         { 0x2000u, 0x2400u }
     };
@@ -133,10 +138,10 @@ void PPU::buildImage() noexcept
         clrHi <<= 2;
         for (auto &pt: sym)
             if (pt > 0)
-                pt = readVRAM(palAddr + (pt | clrHi));
+                pt = m_bus.readVideoMem(palAddr + (pt | clrHi)) | 0b11000000u;
     };
 
-    m_pBackend->setBackground(readVRAM(0x3F00u));
+    m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
 
     if (m_backgroundVisible)
     {
@@ -156,22 +161,25 @@ void PPU::buildImage() noexcept
             for (int c = 0; c < 32; c++)
             {
                 const int x = c * 8 - l;
-                const auto pageAddr = LAYOUT[y / ppc][x / ppr];
+                const auto pageAddr = m_scrollV + m_scrollH == 0 ?
+                                      m_activePage :
+                                      SCROLL_LAYOUT[y / ppc][x / ppr];
+
                 const auto px = x % ppr,                // page x coordinate
                            py = y % ppc,                // page y coordinate
                            indc = (py / 8) * 32 + px / 8, // index in character area
                            inda = (py / 32) * 8 + px / 32;    // index in attributes area
 
                 // Read color information from character area
-                const auto charNum = readVRAM(pageAddr + indc);
+                const auto charNum = m_bus.readVideoMem(pageAddr + indc);
                 readCharacter(charNum, sym, m_baBkgnd, false, false);
 
                 // Read color information from attribute area
-                const auto clrGrp = readVRAM(pageAddr + 960 + inda);
+                const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
                 const auto offInGrp = y / 16 % 2 * 2 + x / 16 % 2;
                 const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
-                expandSymbol(clrHi, PAL_BG);
+                expandSymbol(clrHi, 0x3F00u);
 
                 // Load character / attribute data
                 m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
@@ -181,28 +189,32 @@ void PPU::buildImage() noexcept
         }
     }
 
+    m_sprite0 = false;
     if (m_spritesVisible)
     {
+        // TODO: handle 8x16 sprites
+        assert(!m_bigSprites);
+
         for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
             const auto i = (63u - ns) * 4u;
-            const auto y = m_spriteMem.Read(i),
-                       nChar = m_spriteMem.Read(i + 1),
-                       attrs = m_spriteMem.Read(i + 2),
-                       x = m_spriteMem.Read(i + 3);
+            const auto y = m_bus.readSpriteMem(i),
+                       nChar = m_bus.readSpriteMem(i + 1),
+                       attrs = m_bus.readSpriteMem(i + 2),
+                       x = m_bus.readSpriteMem(i + 3);
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::FRONT :
                              RenderingBackend::Layer::BEHIND;
             const c6502_byte_t clrHi = attrs & 0b11u;
 
-            // TODO: handle 8x16 sprites
-
             readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
 
-            expandSymbol(clrHi, PAL_SPR);
+            expandSymbol(clrHi, 0x3F10u);
 
             // Read symbol, parse attributes
             m_pBackend->setSymbol(lyr, x, y, sym);
+
+            m_sprite0 = ns == 0;
         }
     }
 
@@ -218,8 +230,8 @@ void PPU::readCharacter(c6502_word_t ind,
     const auto ba = baseAddr + ind * 16;
     for (c6502_word_t i = 0; i < 8; i++)
     {
-        const auto r0 = readVRAM(ba + i),
-                   r1 = readVRAM(ba + i + 8);
+        const auto r0 = m_bus.readVideoMem(ba + i),
+                   r1 = m_bus.readVideoMem(ba + i + 8);
         const auto off = (flipv ? 7 - i : i) * 8;
         for (c6502_word_t j = 0; j < 8; j++)
         {
