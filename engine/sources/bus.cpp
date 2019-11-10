@@ -66,7 +66,6 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
             if (addr == 0x4014u)
             {
                 // DMA
-                assert(m_pPPU != nullptr);
                 const c6502_word_t off = static_cast<c6502_word_t>(val) << 8;
                 assert(off < 0x800u || off >= 0x6000u);
                 for (c6502_word_t i = 0u; i < 0x100u; i++)
@@ -99,12 +98,16 @@ void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
 
     const auto mt = m_pCart->mirroring();
 
+    // Palettes location in VROM - 0x2000
+    static constexpr c6502_word_t PAL_BG = 0x1F00u,
+                                  PAL_SPR = 0x1F10u;
+
     // Palette mirroring
     if (addr >= PAL_BG && addr < PAL_BG + 16 && addr % 4 == 0)
         m_vram.Write(PAL_SPR + (addr - PAL_BG), val);
     else if (addr >= PAL_SPR && addr < PAL_SPR + 16 && addr % 4 == 0)
         m_vram.Write(PAL_BG + (addr - PAL_SPR), val);
-    else if (addr < 0x3000u && mt != Mirroring::FourScreen)
+    else if (addr < 0x1000u && mt != Mirroring::FourScreen)
     {
         // Page mirroring
         constexpr c6502_word_t MAP_V[] = { 2, 3, 0, 1 },

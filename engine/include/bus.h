@@ -29,10 +29,6 @@ class Bus
     // Sprite memory, addressed by sprite index (0..63)
     Storage<256> m_spriteMem;
 
-    // Palettes location in VROM
-    static constexpr c6502_word_t PAL_BG = 0x3F00u,
-                                  PAL_SPR = 0x3F10u;
-
     // Modules
     CPU6502 *m_pCPU = nullptr;
     PPU *m_pPPU = nullptr;
