@@ -147,8 +147,8 @@ void PPU::buildImage() noexcept
     {
         // Render background image
         // Palette: 0x3F00
-        const int t = m_scrollV / 30,
-                  l = m_scrollH / 32;
+        const int t = m_scrollV,
+                  l = m_scrollH;
         constexpr int ppr = 256,
                       ppc = 240;
         const bool skipTopAndBottom = mode == OutputMode::NTSC;
@@ -157,18 +157,20 @@ void PPU::buildImage() noexcept
             if (skipTopAndBottom && (r == 0 || r == 29))
                 continue;
 
-            const int y = r * 8 - t;
+            const int y = r * 8,
+                      sy = y + t;
             for (int c = 0; c < 32; c++)
             {
-                const int x = c * 8 - l;
-                const auto pageAddr = m_scrollV + m_scrollH == 0 ?
+                const int x = c * 8,
+                          sx = x + l;
+                const auto pageAddr = t + l == 0 ?
                                       m_activePage :
-                                      SCROLL_LAYOUT[y / ppc][x / ppr];
+                                      SCROLL_LAYOUT[sy / ppc][sx / ppr];
 
-                const auto px = x % ppr,                // page x coordinate
-                           py = y % ppc,                // page y coordinate
-                           indc = (py / 8) * 32 + px / 8, // index in character area
-                           inda = (py / 32) * 8 + px / 32;    // index in attributes area
+                const auto psx = sx % ppr,                   // page x coordinate
+                           psy = sy % ppc,                   // page y coordinate
+                           indc = (psy / 8) * 32 + psx / 8,  // index in character area
+                           inda = (psy / 32) * 8 + psx / 32; // index in attributes area
 
                 // Read color information from character area
                 const auto charNum = m_bus.readVideoMem(pageAddr + indc);
@@ -183,7 +185,7 @@ void PPU::buildImage() noexcept
 
                 // Load character / attribute data
                 m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
-                                      x, y,
+                                      x - l % 8, y - t % 8,
                                       sym);
             }
         }
@@ -203,8 +205,8 @@ void PPU::buildImage() noexcept
                        attrs = m_bus.readSpriteMem(i + 2),
                        x = m_bus.readSpriteMem(i + 3);
             const auto lyr = test<5>(attrs) ?
-                             RenderingBackend::Layer::FRONT :
-                             RenderingBackend::Layer::BEHIND;
+                             RenderingBackend::Layer::BEHIND :
+                             RenderingBackend::Layer::FRONT;
             const c6502_byte_t clrHi = attrs & 0b11u;
 
             readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
