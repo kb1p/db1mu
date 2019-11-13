@@ -5,6 +5,7 @@
 #include "bus.h"
 #include <tuple>
 #include <array>
+#include <type_traits>
 
 #ifdef ENABLE_CPU_TRACE
 #include "log.h"
@@ -155,13 +156,14 @@ private:
             ++m_regs.pc;
     }
 
-    void eval_C(const c6502_word_t r) noexcept
+    template <typename T>
+    void eval_C(const T r) noexcept
     {
+        static_assert(sizeof(T) > 1 && std::is_unsigned<T>::value,
+                      "incorrect argument type (must be unsigned and at least 2 bytes long)");
+
         setFlag<Flag::C>(r > 0xFFu ? 1u : 0u);
     }
-
-    // Prohibit calling it with the argument that can't signal byte overflow
-    void eval_C(const c6502_byte_t r) noexcept = delete;
 
     void eval_Z(const c6502_byte_t r) noexcept
     {

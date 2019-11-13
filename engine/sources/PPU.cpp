@@ -101,9 +101,9 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             break;
         case SCROLL:
             if (m_currScrollReg ^= 1)
-                m_scrollV = val;
-            else
                 m_scrollH = val;
+            else
+                m_scrollV = val;
             break;
         default:
             assert(false && "Illegal PPU register for writing");
@@ -120,11 +120,21 @@ void PPU::update() noexcept
         m_bus.generateNMI();
 }
 
+template <typename T, int N>
+int indexOf(T ndl, const T (&hstk)[N]) noexcept
+{
+    int r = -1;
+    for (int i = 0; r < 0 && i < N; i++)
+        if (hstk[i] == ndl)
+            r = i;
+    return r;
+}
+
 void PPU::buildImage() noexcept
 {
-    static const c6502_word_t SCROLL_LAYOUT[2][2] = {
-        { 0x2800u, 0x2C00u },
-        { 0x2000u, 0x2400u }
+    static constexpr c6502_word_t PAGE_LAYOUT[] = {
+        0x2800u, 0x2C00u,
+        0x2000u, 0x2400u
     };
 
     const auto mode = m_bus.getMode();
@@ -143,12 +153,18 @@ void PPU::buildImage() noexcept
 
     m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
 
+    // Index of the active page in PAGE_LAYOUT
+    const int apn = indexOf(m_activePage, PAGE_LAYOUT);
+    assert(apn >= 0);
+
     if (m_backgroundVisible)
     {
         // Render background image
         // Palette: 0x3F00
         const int t = m_scrollV,
-                  l = m_scrollH;
+                  l = m_scrollH,
+                  vo = t % 8,
+                  ho = l % 8;
         constexpr int ppr = 256,
                       ppc = 240;
         const bool skipTopAndBottom = mode == OutputMode::NTSC;
@@ -163,9 +179,7 @@ void PPU::buildImage() noexcept
             {
                 const int x = c * 8,
                           sx = x + l;
-                const auto pageAddr = t + l == 0 ?
-                                      m_activePage :
-                                      SCROLL_LAYOUT[sy / ppc][sx / ppr];
+                const auto pageAddr = PAGE_LAYOUT[(apn + sy / ppc * 2 + sx / ppr) % 4];
 
                 const auto psx = sx % ppr,                   // page x coordinate
                            psy = sy % ppc,                   // page y coordinate
@@ -185,7 +199,7 @@ void PPU::buildImage() noexcept
 
                 // Load character / attribute data
                 m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
-                                      x - l % 8, y - t % 8,
+                                      x - ho, y - vo,
                                       sym);
             }
         }

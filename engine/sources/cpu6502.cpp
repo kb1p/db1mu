@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <cassert>
 
+typedef unsigned int uint;
+
 // TRACE shorthand for branching operations
 #define TRACE_B(name, c) TRACE(name " cond=%s", (c) ? "true" : "false")
 
@@ -304,7 +306,7 @@ CMD_DEF(CMP)
     TRACE("CMP");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.a;
+    uint r = m_regs.a;
     r -= op;
 
     setFlag<Flag::C>(r < 0x100 ? 1 : 0);
@@ -317,7 +319,7 @@ CMD_DEF(CPX)
     TRACE("CPX");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.x;
+    uint r = m_regs.x;
     r -= op;
 
     setFlag<Flag::C>(r < 0x100 ? 1 : 0);
@@ -330,7 +332,7 @@ CMD_DEF(CPY)
     TRACE("CPY");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.y;
+    uint r = m_regs.y;
     r -= op;
 
     setFlag<Flag::C>(r < 0x100 ? 1 : 0);
@@ -582,9 +584,9 @@ CMD_DEF(RTS)
 CMD_DEF(SBC)
 {
     TRACE("SBC");
-    const int op = fetchOperand<MODE>(),
-              borrow = getFlag<Flag::C>() ^ 1;
-    const int r = static_cast<int>(m_regs.a) - op - borrow;
+    const uint op = fetchOperand<MODE>(),
+               borrow = getFlag<Flag::C>() ^ 1u;
+    const uint r = static_cast<int>(m_regs.a) - op - borrow;
     const auto br = static_cast<c6502_byte_t>(r & 0xFF);
     eval_N(br);
     eval_Z(br);
