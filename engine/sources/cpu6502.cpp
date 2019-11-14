@@ -153,11 +153,11 @@ void CPU6502::cmd_##name<CPU6502::AM::mode>() noexcept
 CMD_DEF(ADC)
 {
     TRACE("ADC");
-    const c6502_word_t op = fetchOperand<MODE>();
-    const c6502_word_t r = static_cast<c6502_word_t>(m_regs.a) + getFlag<Flag::C>() + op;
+    const uint op = fetchOperand<MODE>();
+    const uint r = op + m_regs.a + getFlag<Flag::C>();
 
     eval_C(r);
-    eval_Z(r);
+    eval_Z(r & 0xFFu);
     eval_N(r);
     setFlag<Flag::V>(((m_regs.a ^ op) & 0x80u) == 0u && ((m_regs.a ^ r) & 0x80u) != 0u ? 1u : 0u);
 
@@ -223,11 +223,10 @@ CMD_DEF(BIT)
 {
     TRACE("BIT");
     const auto op = fetchOperand<MODE>();
-    const auto r = m_regs.a & op;
 
-    eval_Z(r);
-    eval_N(r);
-    setFlag<Flag::V>((r >> 6) & 0x1u);
+    eval_Z(m_regs.a & op);
+    eval_N(op);
+    setFlag<Flag::V>((op >> 6) & 0x1u);
 }
 
 CMD_DEF(BMI)
@@ -586,7 +585,7 @@ CMD_DEF(SBC)
     TRACE("SBC");
     const uint op = fetchOperand<MODE>(),
                borrow = getFlag<Flag::C>() ^ 1u;
-    const uint r = static_cast<int>(m_regs.a) - op - borrow;
+    const uint r = static_cast<uint>(m_regs.a) - op - borrow;
     const auto br = static_cast<c6502_byte_t>(r & 0xFF);
     eval_N(br);
     eval_Z(br);
@@ -950,7 +949,9 @@ void CPU6502::NMI()
     Log::v("NMI");
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
+    setFlag<Flag::B>(0);
     push(m_regs.p);
+    setFlag<Flag::I>(1);
 
     const auto pcl = readMem(0xFFFA),
                pch = readMem(0xFFFB);
