@@ -208,9 +208,6 @@ void PPU::buildImage() noexcept
     m_sprite0 = false;
     if (m_spritesVisible)
     {
-        // TODO: handle 8x16 sprites
-        assert(!m_bigSprites);
-
         for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
             const auto i = (63u - ns) * 4u;
@@ -223,14 +220,29 @@ void PPU::buildImage() noexcept
                              RenderingBackend::Layer::FRONT;
             const c6502_byte_t clrHi = attrs & 0b11u;
 
-            readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
+            if (!m_bigSprites)
+            {
+                readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
 
-            expandSymbol(clrHi, 0x3F10u);
+                expandSymbol(clrHi, 0x3F10u);
 
-            // Read symbol, parse attributes
-            m_pBackend->setSymbol(lyr, x, y, sym);
+                // Read symbol, parse attributes
+                m_pBackend->setSymbol(lyr, x, y, sym);
+            }
+            else
+            {
+                const auto e = nChar % 2;
+                const auto baddr = e == 0 ? 0u : 0x1000u;
+                readCharacter(nChar - e, sym, baddr, test<6>(attrs), test<7>(attrs));
+                expandSymbol(clrHi, 0x3F10u);
+                m_pBackend->setSymbol(lyr, x, y, sym);
 
-            m_sprite0 = ns == 0;
+                readCharacter(nChar + 1 - e, sym, baddr, test<6>(attrs), test<7>(attrs));
+                expandSymbol(clrHi, 0x3F10u);
+                m_pBackend->setSymbol(lyr, x, y + 8, sym);
+            }
+
+            m_sprite0 = i == 0;
         }
     }
 
