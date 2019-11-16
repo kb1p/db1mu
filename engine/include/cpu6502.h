@@ -146,8 +146,14 @@ private:
         {
             m_penalty = 1;
             const c6502_byte_t oldPC_h = hi_byte(m_regs.pc - 1);
-            const auto dis = static_cast<c6502_reldis_t>(fetchOperand<AM::IMM>());
-            m_regs.pc = static_cast<c6502_word_t>(static_cast<int>(m_regs.pc) + dis);
+            auto rdis = fetchOperand<AM::IMM>();
+            if (rdis & 0x80u)
+            {
+                rdis = ~rdis + 1u;
+                m_regs.pc -= rdis;
+            }
+            else
+                m_regs.pc += rdis;
             TRACE("Branch to %X", m_regs.pc);
             if (oldPC_h != hi_byte(m_regs.pc))
                 m_penalty = 2;

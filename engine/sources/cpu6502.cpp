@@ -118,7 +118,7 @@ c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND>() noexcept
          ah = readMem(m_regs.pc++);
     const c6502_word_t opaddr = combine(al, ah);
     al = readMem(opaddr);
-    ah = readMem(opaddr + 1);
+    ah = readMem((opaddr & 0xFF00u) | ((opaddr + 1) & 0xFFu));
 
     const auto ea = combine(al, ah);
     TRACE("Mode = IND; addr = %X", ea);
@@ -308,9 +308,9 @@ CMD_DEF(CMP)
     uint r = m_regs.a;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(CPX)
@@ -321,9 +321,9 @@ CMD_DEF(CPX)
     uint r = m_regs.x;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(CPY)
@@ -334,9 +334,9 @@ CMD_DEF(CPY)
     uint r = m_regs.y;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(DEC)

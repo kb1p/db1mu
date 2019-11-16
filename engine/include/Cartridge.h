@@ -125,6 +125,11 @@ public:
      * writePPU().
      */
 
+    bool hasRAM() const noexcept
+    {
+        return m_nRAMs > 0;
+    }
+
 protected:
     const int m_nROMs, m_nVROMs, m_nRAMs;
 

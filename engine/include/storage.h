@@ -17,6 +17,12 @@ public:
 
     void Write(c6502_word_t addr, c6502_byte_t val) noexcept;
     void Write(c6502_word_t addr, const c6502_byte_t *beg, c6502_d_word_t count) noexcept;
+
+    void Clear() noexcept
+    {
+        memset(m_mem, 0, SIZE);
+    }
+
 private:
     c6502_byte_t m_mem[SIZE];
 };

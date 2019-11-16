@@ -195,7 +195,7 @@ void PPU::buildImage() noexcept
                 const auto offInGrp = y / 16 % 2 * 2 + x / 16 % 2;
                 const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
-                expandSymbol(clrHi, 0x3F00u);
+                expandSymbol(clrHi, PAL_BG);
 
                 // Load character / attribute data
                 m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
@@ -218,13 +218,15 @@ void PPU::buildImage() noexcept
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::BEHIND :
                              RenderingBackend::Layer::FRONT;
+            const bool fliph = test<6>(attrs),
+                       flipv = test<7>(attrs);
             const c6502_byte_t clrHi = attrs & 0b11u;
 
             if (!m_bigSprites)
             {
-                readCharacter(nChar, sym, m_baSprites, test<6>(attrs), test<7>(attrs));
+                readCharacter(nChar, sym, m_baSprites, fliph, flipv);
 
-                expandSymbol(clrHi, 0x3F10u);
+                expandSymbol(clrHi, PAL_SPR);
 
                 // Read symbol, parse attributes
                 m_pBackend->setSymbol(lyr, x, y, sym);
@@ -233,12 +235,12 @@ void PPU::buildImage() noexcept
             {
                 const auto e = nChar % 2;
                 const auto baddr = e == 0 ? 0u : 0x1000u;
-                readCharacter(nChar - e, sym, baddr, test<6>(attrs), test<7>(attrs));
-                expandSymbol(clrHi, 0x3F10u);
+                readCharacter(nChar - e, sym, baddr, fliph, flipv);
+                expandSymbol(clrHi, PAL_SPR);
                 m_pBackend->setSymbol(lyr, x, y, sym);
 
-                readCharacter(nChar + 1 - e, sym, baddr, test<6>(attrs), test<7>(attrs));
-                expandSymbol(clrHi, 0x3F10u);
+                readCharacter(nChar + 1 - e, sym, baddr, fliph, flipv);
+                expandSymbol(clrHi, PAL_SPR);
                 m_pBackend->setSymbol(lyr, x, y + 8, sym);
             }
 

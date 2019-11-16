@@ -12,6 +12,10 @@ enum class OutputMode
     PAL, NTSC
 };
 
+// Palettes location in VROM - 0x2000
+static constexpr c6502_word_t PAL_BG = 0x3F00u,
+                              PAL_SPR = 0x3F10u;
+
 /*!
  * System bus, controls communication between all units, manages main memory.
  * Object of this class must be created prior to everything else.
