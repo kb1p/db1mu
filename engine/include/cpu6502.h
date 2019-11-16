@@ -66,7 +66,7 @@ private:
 
     enum class Flag: c6502_byte_t
     {
-        C = 0, Z = 1, N = 2, V = 3, D = 4, B = 6, I = 7
+        C = 0, Z = 1, I = 2, D = 3, B = 4, V = 6, N = 7
     };
 
     template <Flag FLG>

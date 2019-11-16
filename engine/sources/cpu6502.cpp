@@ -7,6 +7,10 @@
  * TODO: replace all these magic numbers with #defines at least.
  */
 
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wconversion"
+#endif
+
 #include "cpu6502.h"
 #include "debugger.h"
 #include "Cartridge.h"
@@ -505,6 +509,7 @@ CMD_DEF(PLP)
 {
     TRACE("PLP");
     m_regs.p = pop();
+    m_regs.p |= 0x20u;
 }
 
 CMD_DEF(ROL)
@@ -567,6 +572,7 @@ CMD_DEF(RTI)
 {
     TRACE("RTI");
     m_regs.p = pop();
+    m_regs.p |= 0x20u;
     const auto ral = pop(),
                rah = pop();
     m_regs.pc = combine(ral, rah);
