@@ -202,11 +202,81 @@ Evaluate:
 .ror_fail:
     jmp     .fail
 .ror_succ:
-    ; Result saving: 0 means success (default), 1 failure
+    ; ora test
     lda     #0
+    ora     #$FF
+    bpl     .ora_fail
+    beq     .ora_fail
+    cmp     #$FF
+    bne     .ora_fail
+    lda     #0
+    ora     #0
+    bne     .ora_fail
+    bmi     .ora_fail
+    ora     #1
+    beq     .ora_fail
+    bmi     .ora_fail
+    ora     #$80
+    beq     .ora_fail
+    bpl     .ora_fail
+    jmp     .ora_succ
+.ora_fail:
+    jmp     .fail
+.ora_succ:
+    ; bit test
+    lda     #$FF
+    sta     <test
+    lda     #10
+    bit     <test
+    beq     .bit_fail
+    bpl     .bit_fail
+    bvc     .bit_fail
+    lda     #0
+    bit     <test
+    bne     .bit_fail
+    bpl     .bit_fail
+    bvc     .bit_fail
+    lda     #12
+    sta     <test
+    lda     #1
+    bit     <test
+    bne     .bit_fail
+    bmi     .bit_fail
+    bvs     .bit_fail
+    jmp     .bit_succ
+.bit_fail:
+    jmp     .fail
+.bit_succ:
+    ; and operation test
+    lda     #$FF
+    and     #123
+    beq     .and_fail
+    bmi     .and_fail
+    cmp     #123
+    bne     .and_fail
+    lda     #$e0
+    and     #$c0
+    beq     .and_fail
+    bpl     .and_fail
+    cmp     #$c0
+    bne     .and_fail
+    lda     #-128
+    and     #127
+    bne     .and_fail
+    bmi     .and_fail
+    lda     #0
+    and     #$FF
+    bne     .and_fail
+    bmi     .and_fail
+    jmp     .and_succ
+.and_fail:
+    jmp     .fail
+.and_succ:
+    ; Result saving: green color means success (default), red - failure
+    lda     #%00001100
     jmp     .saveResult
 .fail:
-    lda     #1
+    lda     #%00110000
 .saveResult:
     sta     <result
 ; wait for vblank
@@ -230,27 +300,22 @@ Render:
 
     ; test result
     lda     <result
-    bne     .red
-    lda     #%00001100
     sta     $2007
-    jmp     .quit
-.red:
-    lda     #%00110000
-    sta     $2007
-.quit:
     ; disable sprites / background tiles, render only solid color
     lda     #0
     sta     $2001
     rti
 
-Dummy:
+Interrupt:
+    lda     #%00000011
+    sta     <result
     rti
 
     .bank   1
     .org    $FFFA
     .dw     Render
     .dw     Evaluate
-    .dw     Dummy
+    .dw     Interrupt
 
     .bank 2
     .org  $0000

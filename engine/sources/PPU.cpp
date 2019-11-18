@@ -1,13 +1,13 @@
 #include "PPU.h"
 #include "log.h"
 
-template <unsigned POS>
+template <c6502_byte_t POS>
 constexpr c6502_byte_t bit() noexcept
 {
     return 1u << POS;
 }
 
-template <unsigned POS>
+template <c6502_byte_t POS>
 constexpr bool test(c6502_byte_t v) noexcept
 {
     return (v & (1u << POS)) != 0;
@@ -26,7 +26,10 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
             if (m_spritesOnLine > 8)
                 rv |= bit<5>();
             if (m_sprite0)
+            {
                 rv |= bit<6>();
+                m_sprite0 = false;
+            }
             if (m_vblank)
             {
                 rv |= bit<7>();
@@ -112,9 +115,11 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
 
 void PPU::update() noexcept
 {
-    m_vblank = false;
+    m_vblank = m_enableWrite = false;
     buildImage();
-    m_vblank = true;
+    m_vblank = m_enableWrite = true;
+
+    m_sprite0 = false;
 
     if (m_enableNMI)
         m_bus.generateNMI();
@@ -205,7 +210,6 @@ void PPU::buildImage() noexcept
         }
     }
 
-    m_sprite0 = false;
     if (m_spritesVisible)
     {
         for (c6502_word_t ns = 0; ns < 64u; ns++)
@@ -244,7 +248,8 @@ void PPU::buildImage() noexcept
                 m_pBackend->setSymbol(lyr, x, y + 8, sym);
             }
 
-            m_sprite0 = i == 0;
+            if (i == 0)
+                m_sprite0 = true;
         }
     }
 

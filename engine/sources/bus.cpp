@@ -38,16 +38,18 @@ c6502_byte_t Bus::readMem(c6502_word_t addr)
     switch (addr >> 13)
     {
         case 0:
-            return m_ram.Read(addr & 0x7FF);
+            return m_ram.Read(addr & 0x7FFu);
         case 1:
             // PPU
             assert(m_pPPU != nullptr);
-            return m_pPPU->readRegister(addr & 0x0F);
+            return m_pPPU->readRegister(addr & 0x0Fu);
         case 2:
             // APU
             //assert(false && "APU is not yet implemented");
             //break;
             return 0;
+        case 3:
+            return m_wram.Read(addr & 0x1FFFu);
         default:
             // Read from the cartridge
             return m_pCart->mapper()->readROM(addr);
@@ -60,12 +62,12 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
     {
         case 0:
             // To internal RAM
-            m_ram.Write(addr & 0x7FF, val);
+            m_ram.Write(addr & 0x7FFu, val);
             break;
         case 1:
             // To PPU registers
             assert(m_pPPU != nullptr);
-            return m_pPPU->writeRegister(addr & 0x0F, val);
+            return m_pPPU->writeRegister(addr & 0x0Fu, val);
             break;
         case 2:
             if (addr == 0x4014u)
@@ -81,6 +83,9 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
                 // To APU registers
                 //assert(false && "APU is not yet implemented");
             }
+            break;
+        case 3:
+            m_wram.Write(addr & 0x1FFFu, val);
             break;
         default:
             // To the cartridge mapper

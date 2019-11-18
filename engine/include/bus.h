@@ -30,6 +30,9 @@ class Bus
     // Video memory, separate address space
     Storage<0x2000> m_vram;
 
+    // Cartridge permanent RAM
+    Storage<0x2000> m_wram;
+
     // Sprite memory, addressed by sprite index (0..63)
     Storage<256> m_spriteMem;
 

@@ -76,7 +76,7 @@ private:
          m_backgroundVisible = true,
          m_allSpritesVisible = true,
          m_fullBacgroundVisible = true,
-         m_vblank = true,
+         m_vblank = false,
          m_sprite0 = false,
          m_enableWrite = true;
     c6502_word_t m_baBkgnd = 0,
