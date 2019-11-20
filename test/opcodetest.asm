@@ -272,6 +272,152 @@ Evaluate:
 .and_fail:
     jmp     .fail
 .and_succ:
+    ; inc operation test
+    lda     #0
+    sta     <test
+    inc     <test
+    beq     .inc_fail
+    bmi     .inc_fail
+    lda     #1
+    cmp     <test
+    bne     .inc_fail
+    inc     <test
+    lda     #2
+    cmp     <test
+    bne     .inc_fail
+    lda     #$FE
+    sta     <test
+    inc     <test
+    beq     .inc_fail
+    bpl     .inc_fail
+    inc     <test
+    bne     .inc_fail
+    bmi     .inc_fail
+    lda     #$7E
+    sta     <test
+    inc     <test
+    bmi     .inc_fail
+    inc     <test
+    bpl     .inc_fail
+    jmp     .inc_succ
+.inc_fail:
+    jmp     .fail
+.inc_succ:
+    ; inx operation test
+    ldx     #0
+    inx
+    beq     .inx_fail
+    bmi     .inx_fail
+    ldx     #1
+    cpx     #1
+    bne     .inx_fail
+    inx
+    cpx     #2
+    bne     .inx_fail
+    ldx     #$FE
+    inx
+    beq     .inx_fail
+    bpl     .inx_fail
+    inx
+    bne     .inx_fail
+    bmi     .inx_fail
+    ldx     #$7E
+    inx
+    bmi     .inx_fail
+    inx
+    bpl     .inx_fail
+    jmp     .inx_succ
+.inx_fail:
+    jmp     .fail
+.inx_succ:
+    ; dec test
+    lda     #2
+    sta     <test
+    dec     <test
+    beq     .dec_fail
+    bmi     .dec_fail
+    dec     <test
+    bne     .dec_fail
+    bmi     .dec_fail
+    dec     <test
+    beq     .dec_fail
+    bpl     .dec_fail
+    ldy     #$FF
+    cpy     <test
+    bne     .dec_fail
+    dec     <test
+    bpl     .dec_fail
+    beq     .dec_fail
+    ldx     #$81
+    stx     <test
+    dec     <test
+    bpl     .dec_fail
+    beq     .dec_fail
+    dec     <test
+    bmi     .dec_fail
+    beq     .dec_fail
+    ldx     #$7F
+    cpx     <test
+    bne     .dec_fail
+    jmp     .dec_succ
+.dec_fail:
+    jmp     .fail
+.dec_succ:
+    ; dey test
+    ldy     #2
+    dey
+    beq     .dey_fail
+    bmi     .dey_fail
+    dey
+    bne     .dey_fail
+    bmi     .dey_fail
+    dey
+    beq     .dey_fail
+    bpl     .dey_fail
+    cpy     #$FF
+    bne     .dey_fail
+    dey
+    bpl     .dey_fail
+    beq     .dey_fail
+    ldy     #$81
+    dey
+    bpl     .dey_fail
+    beq     .dey_fail
+    dey
+    bmi     .dey_fail
+    beq     .dey_fail
+    cpy     #$7F
+    bne     .dey_fail
+    jmp     .dey_succ
+.dey_fail:
+    jmp     .fail
+.dey_succ:
+    ; eor test
+    lda     #0
+    bne     .eor_fail
+    eor     #$FF
+    bpl     .eor_fail
+    beq     .eor_fail
+    cmp     #$FF
+    bne     .eor_fail
+    eor     #%10101010
+    bmi     .eor_fail
+    beq     .eor_fail
+    eor     #%01010101
+    bmi     .eor_fail
+    bne     .eor_fail
+    lda     #$FF
+    bpl     .eor_fail
+    eor     #$7F
+    bpl     .eor_fail
+    beq     .eor_fail
+    eor     #$80
+    bne     .eor_fail
+    bmi     .eor_fail
+    jmp     .eor_succ
+.eor_fail:
+    jmp     .fail
+.eor_succ:
     ; Result saving: green color means success (default), red - failure
     lda     #%00001100
     jmp     .saveResult
