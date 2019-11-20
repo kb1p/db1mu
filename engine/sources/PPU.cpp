@@ -15,8 +15,6 @@ constexpr bool test(c6502_byte_t v) noexcept
 
 c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
 {
-    Log::v("Reading PPU register #%d", n);
-
     c6502_byte_t rv = 0;
     switch (n)
     {
@@ -50,12 +48,13 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
             assert(false && "Illegal PPU register for reading");
     }
 
+    Log::v("Reading value %X from PPU register #%d", rv, n);
     return rv;
 }
 
 void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
 {
-    Log::v("Writing value %d to PPU register #%d", val, n);
+    Log::v("Writing value %X to PPU register #%d", val, n);
     switch (n)
     {
         case CONTROL1:
@@ -78,15 +77,40 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             m_baBkgnd = test<4>(val) ? 0x1000u : 0;
             m_bigSprites = test<5>(val);
             m_enableNMI = test<7>(val);
+
+            // DEBUG
+            Log::v("active page = %X, "
+                   "addr increment = %d, "
+                   "sprites chargen addr = %X, "
+                   "bg chargen addr = %X, "
+                   "big sprites = %d, "
+                   "NMI enabled = %d, ",
+                   m_activePage,
+                   m_addrIncr,
+                   m_baSprites,
+                   m_baBkgnd,
+                   m_bigSprites,
+                   m_enableNMI);
             break;
         case CONTROL2:
             m_fullBacgroundVisible = test<1>(val);
             m_allSpritesVisible = test<2>(val);
             m_backgroundVisible = test<3>(val);
             m_spritesVisible = test<4>(val);
+
+            // Debug
+            Log::v("bg visible = %d, "
+                   "full bg = %d, "
+                   "sprites visible = %d, "
+                   "all sprites = %d, ",
+                   m_backgroundVisible,
+                   m_fullBacgroundVisible,
+                   m_spritesVisible,
+                   m_allSpritesVisible);
             break;
         case SPRMEM_ADDR:
             m_sprmemAddr = val;
+            Log::v("sprite address = %X", m_sprmemAddr);
             break;
         case SPRMEM_DATA:
             m_bus.writeSpriteMem(m_sprmemAddr++, val);
@@ -97,6 +121,7 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
 
             // Read error doesn't happen during palette access
             m_vramReadError = m_vramAddr < 0x3F00u || m_vramAddr >= 0x3F20u;
+            Log::v("vram address = %X, read error = %d", m_vramAddr, m_vramReadError);
             break;
         case VIDMEM_DATA:
             m_bus.writeVideoMem(m_vramAddr, val);
@@ -104,9 +129,15 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             break;
         case SCROLL:
             if (m_currScrollReg ^= 1)
+            {
                 m_scrollH = val;
+                Log::v("hscroll = %d", m_scrollH);
+            }
             else
+            {
                 m_scrollV = val;
+                Log::v("vscroll = %d", m_scrollV);
+            }
             break;
         default:
             assert(false && "Illegal PPU register for writing");
