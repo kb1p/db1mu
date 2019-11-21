@@ -1,12 +1,12 @@
 ; This program tests that opcode implementation is correct
 
-    .inesprg    1
+    .inesprg    2
     .ineschr    1
     .inesmir    1
     .inesmap    0
 
     .bank   0
-    .org    $C000
+    .org    $8000
 
 ; symbolic names of memory locations in page zero
         .rsset  $0000
@@ -418,6 +418,102 @@ Evaluate:
 .eor_fail:
     jmp     .fail
 .eor_succ:
+    ; lsr test
+    lda     #$FF
+    sta     <test
+    clc
+    lsr     <test
+    bcc     .lsr_fail
+    bmi     .lsr_fail
+    beq     .lsr_fail
+    lsr     <test
+    lsr     <test
+    lsr     <test
+    lsr     <test
+    lsr     <test
+    lsr     <test
+    bcc     .lsr_fail
+    bmi     .lsr_fail
+    beq     .lsr_fail
+    lda     #1
+    cmp     <test
+    bne     .lsr_fail
+    lsr     <test
+    bne     .lsr_fail
+    bcc     .lsr_fail
+    bmi     .lsr_fail
+    lsr     <test
+    bne     .lsr_fail
+    bcs     .lsr_fail
+    bmi     .lsr_fail
+    lda     #4
+    sec
+    lsr     A
+    beq     .lsr_fail
+    bmi     .lsr_fail
+    bcs     .lsr_fail
+    lsr     A
+    beq     .lsr_fail
+    bmi     .lsr_fail
+    bcs     .lsr_fail
+    lsr     A
+    bne     .lsr_fail
+    bmi     .lsr_fail
+    bcc     .lsr_fail
+    lda     #$80
+    lsr     A
+    bmi     .lsr_fail
+    beq     .lsr_fail
+    bcs     .lsr_fail
+    jmp     .lsr_succ
+.lsr_fail:
+    jmp     .fail
+.lsr_succ:
+    lda     #$FF
+    sta     <test
+    clc
+    asl     <test
+    bcc     .asl_fail
+    bpl     .asl_fail
+    beq     .asl_fail
+    lda     #1
+    bit     <test
+    bne     .asl_fail
+    asl     <test
+    asl     <test
+    asl     <test
+    asl     <test
+    asl     <test
+    asl     <test
+    bpl     .asl_fail
+    beq     .asl_fail
+    bcc     .asl_fail
+    ldx     #$80
+    cpx     <test
+    bne     .asl_fail
+    asl     <test
+    bcc     .asl_fail
+    bne     .asl_fail
+    bmi     .asl_fail
+    lda     #$20
+    asl     A
+    bmi     .asl_fail
+    beq     .asl_fail
+    bcs     .asl_fail
+    asl     A
+    bpl     .asl_fail
+    beq     .asl_fail
+    bcs     .asl_fail
+    asl     A
+    bne     .asl_fail
+    bcc     .asl_fail
+    bmi     .asl_fail
+    jmp     .asl_succ
+.asl_fail:
+    jmp     .fail
+.asl_succ:
+    ; test that jsr / rts doesn't taint instruction order
+    jsr     TestProc
     ; Result saving: green color means success (default), red - failure
     lda     #%00001100
     jmp     .saveResult
@@ -435,6 +531,15 @@ Evaluate:
     sta     $2001
 .loop:
     jmp     .loop
+
+    .bank   2
+    .org    $C000
+
+TestProc:
+    ; test RTS correctness
+    lda     #%00110000
+    sta     <result
+    rts
 
 Render:
     ; PPU state check can be skipped for db1mu (temporarily)
@@ -457,12 +562,12 @@ Interrupt:
     sta     <result
     rti
 
-    .bank   1
+    .bank   3
     .org    $FFFA
     .dw     Render
     .dw     Evaluate
     .dw     Interrupt
 
-    .bank 2
-    .org  $0000
+    .bank   4
+    .org    $0000
     .incbin "opcodetest.chr"
