@@ -113,6 +113,7 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             Log::v("sprite address = %X", m_sprmemAddr);
             break;
         case SPRMEM_DATA:
+            Log::v("write to sprite address = %X", m_sprmemAddr);
             m_bus.writeSpriteMem(m_sprmemAddr++, val);
             break;
         case VIDMEM_ADDR:
@@ -124,6 +125,7 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             Log::v("vram address = %X, read error = %d", m_vramAddr, m_vramReadError);
             break;
         case VIDMEM_DATA:
+            Log::v("write to vram address = %X", m_vramAddr);
             m_bus.writeVideoMem(m_vramAddr, val);
             m_vramAddr += m_addrIncr;
             break;

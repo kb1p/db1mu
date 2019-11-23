@@ -22,7 +22,7 @@ inline constexpr c6502_byte_t lo_byte(c6502_word_t x) noexcept
 
 inline constexpr c6502_word_t combine(c6502_byte_t lo, c6502_byte_t hi) noexcept
 {
-    return (static_cast<c6502_word_t>(hi) << 8) | lo;
+    return (static_cast<c6502_word_t>(hi & 0xFFu) << 8) | (lo & 0xFFu);
 }
 
 class Exception

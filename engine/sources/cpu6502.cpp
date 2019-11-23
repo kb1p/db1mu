@@ -131,10 +131,10 @@ c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND>() noexcept
 }
 
 template <>
-c6502_byte_t CPU6502::fetchOperand<CPU6502::AM::IMM>() noexcept
+c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IMM>() noexcept
 {
-    const auto eo = readMem(m_regs.pc++);
-    TRACE("Mode = IMM; op. value = %X", eo);
+    const auto eo = m_regs.pc++;
+    TRACE("Mode = IMM; addr = %X", eo);
     return eo;
 }
 
