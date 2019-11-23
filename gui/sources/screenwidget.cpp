@@ -106,8 +106,7 @@ void ScreenWidget::paintGL()
 {
     if (m_pEng->ready)
     {
-        m_pEng->cpu.runFrame();
-        m_pEng->ppu.update();
+        m_pEng->bus.runFrame();
     }
     else
     {

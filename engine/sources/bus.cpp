@@ -16,16 +16,44 @@ void Bus::injectCartrige(Cartrige *cart)
     m_pCPU->reset();
 }
 
-void Bus::generateIRQ()
+constexpr int divup(int a, int b) noexcept
 {
-    assert(m_pCPU != nullptr);
-    m_pCPU->IRQ();
+    return a / b + (a % b != 0 ? 1 : 0);
 }
 
-void Bus::generateNMI()
+void Bus::runFrame()
 {
-    assert(m_pCPU != nullptr);
-    m_pCPU->NMI();
+    // TODO: these values need to be tuned
+    constexpr int PAL_FREQ = 1773447,
+                  NTSC_FREQ = 1789772,
+                  PAL_FPS = 50,
+                  NTSC_FPS = 60,
+                  PAL_FC = divup(PAL_FREQ, PAL_FPS),
+                  NTSC_FC = divup(NTSC_FREQ, NTSC_FPS),
+                  PAL_LC = divup(PAL_FC, 264),
+                  NTSC_LC = divup(NTSC_FC, 264);
+
+    const int clocksPerLine = m_mode == OutputMode::PAL ? PAL_LC : NTSC_LC;
+    int clocks = m_mode == OutputMode::PAL ? PAL_FC : NTSC_FC;
+
+    // Most of frame time PPU is busy
+    clocks -= m_pCPU->run(clocksPerLine * 240);
+
+    // Render image
+    m_pPPU->draw();
+
+    // Unlock PPU and send NMI signal
+    m_pPPU->onBeginVblank();
+
+    if (m_pPPU->isNMIEnabled())
+        clocks -= m_pCPU->NMI();
+
+    // PPU is opened for writinng only during VSYNC
+    clocks -= m_pCPU->run(clocks);
+
+    m_pPPU->onEndVblank();
+
+    assert(clocks <= 0);
 }
 
 void Bus::testKeys()

@@ -902,7 +902,6 @@ void CPU6502::initOpHandlers() noexcept
 /*** CPU class implementation ***/
 CPU6502::CPU6502(Bus &bus)
     : m_state(STATE_HALTED)
-    , m_period(0)
     , m_bus { bus }
 {
     // Static initializer
@@ -924,13 +923,13 @@ void CPU6502::reset()
                pch = readMem(0xFFFD);
     m_regs.pc = combine(pcl, pch);
 
-    m_period = 0;
     m_state = STATE_RUN;
 }
 
 // Handle maskable interrupt
-void CPU6502::IRQ()
+int CPU6502::IRQ()
 {
+    int clk = 0;
     if (getFlag<Flag::I>() == 0)
     {
         Log::v("IRQ");
@@ -945,12 +944,13 @@ void CPU6502::IRQ()
                    pch = readMem(0xFFFF);
         m_regs.pc = combine(pcl, pch);
 
-        m_period -= 7;
+        clk = 7;
     }
+    return clk;
 }
 
 // Handle non-maskable interrupt
-void CPU6502::NMI()
+int CPU6502::NMI()
 {
     Log::v("NMI");
     push(hi_byte(m_regs.pc));
@@ -963,25 +963,28 @@ void CPU6502::NMI()
                pch = readMem(0xFFFB);
     m_regs.pc = combine(pcl, pch);
 
-    m_period -= 7;
+    return 7;
 }
 
-void CPU6502::runFrame() noexcept
+int CPU6502::run(int clk) noexcept
 {
-    m_period += m_bus.getMode() == OutputMode::PAL ? 35469 : 29830;
-    while (m_period > 0)
+    assert(clk > 0);
+    int realClocks = 0;
+    while (realClocks < clk)
     {
         switch (m_state)
         {
             case STATE_RUN:
-                m_period -= step();
+                realClocks += step();
                 break;
             case STATE_ERROR:
                 Log::e("Unexpected CPU state (%d)", m_state);
             case STATE_HALTED:
-                return;
+                return 0;
         }
     }
+
+    return realClocks;
 }
 
 int CPU6502::step()

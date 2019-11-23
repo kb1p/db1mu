@@ -85,9 +85,7 @@ public:
         return m_pCart;
     }
 
-    // Interrupts dispatching functions
-    void generateIRQ();
-    void generateNMI();
+    void runFrame();
 
     void testKeys();
 

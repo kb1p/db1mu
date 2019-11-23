@@ -123,7 +123,6 @@ void Debugger::PrintCPUState()
     << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::N>())
     << "|"
     << "\n";
-    std::cout << "period = " << std::dec << cpu->m_period << "\n";
 
 }
 

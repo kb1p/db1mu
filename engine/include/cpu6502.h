@@ -28,11 +28,11 @@ public:
 
     CPU6502(Bus &bus);
 
-    void runFrame() noexcept;
+    int run(int clk) noexcept;
 
     void reset();
-    void IRQ();
-    void NMI();
+    int IRQ();
+    int NMI();
 
     State state() const noexcept
     {
@@ -54,7 +54,6 @@ private:
     } m_regs;
 
     State m_state;
-    int m_period;
     Bus &m_bus;
     int m_penalty;
 

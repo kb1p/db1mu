@@ -146,16 +146,21 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
     }
 }
 
-void PPU::update() noexcept
+void PPU::draw() noexcept
 {
-    m_vblank = m_enableWrite = false;
     buildImage();
-    m_vblank = m_enableWrite = true;
+}
 
-    m_sprite0 = false;
+void PPU::onBeginVblank() noexcept
+{
+    m_enableWrite = true;
+    m_vblank = true;
+}
 
-    if (m_enableNMI)
-        m_bus.generateNMI();
+void PPU::onEndVblank() noexcept
+{
+    m_enableWrite = false;
+    m_vblank = false;
 }
 
 template <typename T, int N>

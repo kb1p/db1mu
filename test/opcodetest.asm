@@ -16,6 +16,8 @@ test    .rs     1
 ; This procedure does the test itself. If some opcode produces
 ; unexpected result, it must put 1 to the byte $0000, or 0 in case of success.
 ; This routine presumes that conditional jump instructions are operating correct.
+    .list
+
 Evaluate:
     sei
     ; Comparison operations test
@@ -512,6 +514,15 @@ Evaluate:
 .asl_fail:
     jmp     .fail
 .asl_succ:
+    ; test indirect addressing mode in JMP command
+    lda     #%00110000
+    sta     <result
+    lda     #LOW(.ind_succ)
+    sta     $1FF
+    lda     #HIGH(.ind_succ)
+    sta     $100
+    jmp     [$1FF]
+.ind_succ:
     ; test that jsr / rts doesn't taint instruction order
     jsr     TestProc
     ; Result saving: green color means success (default), red - failure

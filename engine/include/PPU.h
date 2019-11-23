@@ -63,22 +63,28 @@ public:
     void writeRegister(c6502_word_t n, c6502_byte_t val) noexcept;
     c6502_byte_t readRegister(c6502_word_t n) noexcept;
 
-    // Renders the image and updates the state
-    void update() noexcept;
+    bool isNMIEnabled() const noexcept
+    {
+        return m_enableNMI;
+    }
+
+    void draw() noexcept;
+    void onBeginVblank() noexcept;
+    void onEndVblank() noexcept;
 
 private:
     Bus &m_bus;
     RenderingBackend *const m_pBackend;
 
-    bool m_enableNMI = true,
+    bool m_enableNMI = false,
          m_bigSprites = false,
-         m_spritesVisible = true,
-         m_backgroundVisible = true,
-         m_allSpritesVisible = true,
-         m_fullBacgroundVisible = true,
+         m_spritesVisible = false,
+         m_backgroundVisible = false,
+         m_allSpritesVisible = false,
+         m_fullBacgroundVisible = false,
          m_vblank = false,
          m_sprite0 = false,
-         m_enableWrite = true;
+         m_enableWrite = false;
     c6502_word_t m_baBkgnd = 0,
                  m_baSprites = 0,
                  m_addrIncr = 1,
