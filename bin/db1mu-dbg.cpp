@@ -8,36 +8,53 @@
 #include <iostream>
 #include <fstream>
 
-int main()
+class DummyBackend: public PPU::RenderingBackend
 {
-    std::ofstream logFile { "log.txt", std::ios::app };
+public:
+    void setBackground(c6502_byte_t color) override
+    {
+    }
+
+    void setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64]) override
+    {
+    }
+
+    void draw() override
+    {
+    }
+};
+
+int main(int argc, char **argv)
+{
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << "<ROM-file> [<log-file>]" << std::endl;
+        return 1;
+    }
+
+    std::ofstream logFile { argc > 2 ? argv[2] : "log.txt", std::ios::app };
     auto &logCfg = Log::instance().config();
     logCfg.pOutput = &logFile;
     logCfg.filter = Log::LEVEL_VERBOSE;
     logCfg.autoFlush = true;
 
-    Bus systemBus;
-    CPU6502 cpu { CPU6502::NTSC, systemBus };
+    Bus systemBus { OutputMode::NTSC };
+    CPU6502 cpu { systemBus };
     systemBus.setCPU(&cpu);
-    PPU ppu { systemBus, nullptr };
+    DummyBackend db;
+    PPU ppu { systemBus, &db };
     systemBus.setPPU(&ppu);
     Cartrige cartrige;
-    std::ifstream in("raw.data", std::ios::in | std::ios::binary);
     ROMLoader loader(cartrige);
     try
     {
-        // Find the "raw.data" sample file in the "test" folder
-        //loader.loadRawData(in, 0xC000, Mapper::ROM_SIZE);
-        // Try and see something like this:
-        loader.loadNES("COLOR.NES");
+        loader.loadNES(argv[1]);
     }
     catch (const Exception &ex)
     {
-        in.close();
-        std::cerr << "Shit happens: " << ex.message() << std::endl;
+        std::cerr << "Error: " << ex.message() << std::endl;
         return 1;
     }
-    in.close();
 
     systemBus.injectCartrige(&cartrige);
     Debugger dbg { systemBus };

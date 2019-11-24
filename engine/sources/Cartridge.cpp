@@ -21,18 +21,18 @@ Mapper::~Mapper()
     delete[] m_pRAM;
 }
 
-void Mapper::addROMBank(const c6502_byte_t *p)
+void Mapper::setROMBank(int n, const c6502_byte_t *p)
 {
     assert(m_pROM);
-    assert(m_curROM < m_nROMs);
-    m_pROM[m_curROM++].Write(0, p, ROM_SIZE);
+    assert(n >= 0 && n < m_nROMs);
+    m_pROM[n].Write(0, p, ROM_SIZE);
 }
 
-void Mapper::addVROMBank(const c6502_byte_t *p)
+void Mapper::setVROMBank(int n, const c6502_byte_t *p)
 {
     assert(m_pVROM);
-    assert(m_curVROM < m_nVROMs);
-    m_pVROM[m_curVROM++].Write(0, p, VROM_SIZE);
+    assert(n >= 0 && n < m_nVROMs);
+    m_pVROM[n].Write(0, p, VROM_SIZE);
 }
 
 void Cartrige::setTrainer(const c6502_byte_t tr[512])

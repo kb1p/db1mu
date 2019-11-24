@@ -26,6 +26,8 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionOpen"/>
+    <addaction name="separator"/>
     <addaction name="actionE_xit"/>
    </widget>
    <addaction name="menu_File"/>
@@ -39,6 +41,14 @@
     <string>Ctrl+X</string>
    </property>
   </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>&amp;Open ROM</string>
+   </property>
+   <property name="toolTip">
+    <string>Open ROM image</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -47,6 +57,22 @@
    <signal>triggered()</signal>
    <receiver>b1MainWindow</receiver>
    <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>274</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionOpen</sender>
+   <signal>triggered()</signal>
+   <receiver>b1MainWindow</receiver>
+   <slot>openROM()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>

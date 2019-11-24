@@ -10,9 +10,6 @@ typedef uint8_t c6502_byte_t;
 typedef uint16_t c6502_word_t;
 typedef uint32_t c6502_d_word_t;
 
-/// Signed byte type for relative jumps (can jump up to 127 / 128 bytes forward / backward).
-typedef int8_t c6502_reldis_t;
-
 inline constexpr c6502_byte_t hi_byte(c6502_word_t x) noexcept
 {
     return static_cast<c6502_byte_t>((x >> 8) & 0xFFu);
@@ -25,7 +22,7 @@ inline constexpr c6502_byte_t lo_byte(c6502_word_t x) noexcept
 
 inline constexpr c6502_word_t combine(c6502_byte_t lo, c6502_byte_t hi) noexcept
 {
-    return (static_cast<c6502_word_t>(hi) << 8) | lo;
+    return (static_cast<c6502_word_t>(hi & 0xFFu) << 8) | (lo & 0xFFu);
 }
 
 class Exception

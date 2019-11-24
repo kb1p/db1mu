@@ -5,6 +5,7 @@
 #include "bus.h"
 #include <tuple>
 #include <array>
+#include <type_traits>
 
 #ifdef ENABLE_CPU_TRACE
 #include "log.h"
@@ -25,12 +26,13 @@ public:
         STATE_ERROR
     };
 
-    CPU6502(Mode mode, Bus &bus);
+    CPU6502(Bus &bus);
 
-    void clock();
+    int run(int clk) noexcept;
+
     void reset();
-    void IRQ();
-    void NMI();
+    int IRQ();
+    int NMI();
 
     State state() const noexcept
     {
@@ -51,9 +53,7 @@ private:
         c6502_word_t pc;
     } m_regs;
 
-    Mode m_mode;
     State m_state;
-    int m_period;
     Bus &m_bus;
     int m_penalty;
 
@@ -65,7 +65,7 @@ private:
 
     enum class Flag: c6502_byte_t
     {
-        C = 0, Z = 1, N = 2, V = 3, D = 4, B = 6, I = 7
+        C = 0, Z = 1, I = 2, D = 3, B = 4, V = 6, N = 7
     };
 
     template <Flag FLG>
@@ -85,28 +85,28 @@ private:
 
     c6502_byte_t readMem(c6502_word_t addr) noexcept
     {
-        return m_bus.read(addr);
+        return m_bus.readMem(addr);
     }
 
     void writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
     {
-        m_bus.write(addr, val);
+        m_bus.writeMem(addr, val);
     }
 
-    void updateScreen();
-    void testKeys();
     int step();
 
     // Helpers
     // Push to / pop from the stack shorthands
     void push(c6502_byte_t v) noexcept
     {
-        writeMem(0x100 | m_regs.s--, v);
+        assert(m_regs.s > 0u && "Stack overflow");
+        writeMem(0x100u | static_cast<c6502_word_t>(m_regs.s--), v);
     }
 
     c6502_byte_t pop() noexcept
     {
-        return readMem(0x100 | (++m_regs.s));
+        assert(m_regs.s < 0xFFu && "Stack underflow");
+        return readMem(0x100u | static_cast<c6502_word_t>(++m_regs.s));
     }
 
     // Get the byte PC points to and increase PC by 1
@@ -143,27 +143,29 @@ private:
     void branchIf() noexcept
     {
         constexpr c6502_byte_t n = IS_SET ? 0 : 1;
+        const auto rdis = fetchOperand<AM::IMM>();
         if (getFlag<F>() ^ n)
         {
             m_penalty = 1;
             const c6502_byte_t oldPC_h = hi_byte(m_regs.pc - 1);
-            const auto dis = static_cast<c6502_reldis_t>(fetchOperand<AM::IMM>());
-            m_regs.pc = static_cast<c6502_word_t>(static_cast<int>(m_regs.pc) + dis);
+            if (rdis & 0x80u)
+                m_regs.pc -= 0x100u - rdis;
+            else
+                m_regs.pc += rdis;
             TRACE("Branch to %X", m_regs.pc);
             if (oldPC_h != hi_byte(m_regs.pc))
                 m_penalty = 2;
         }
-        else
-            ++m_regs.pc;
     }
 
-    void eval_C(const c6502_word_t r) noexcept
+    template <typename T>
+    void eval_C(const T r) noexcept
     {
+        static_assert(sizeof(T) > 1 && std::is_unsigned<T>::value,
+                      "incorrect argument type (must be unsigned and at least 2 bytes long)");
+
         setFlag<Flag::C>(r > 0xFFu ? 1u : 0u);
     }
-
-    // Prohibit calling it with the argument that can't signal byte overflow
-    void eval_C(const c6502_byte_t r) noexcept = delete;
 
     void eval_Z(const c6502_byte_t r) noexcept
     {

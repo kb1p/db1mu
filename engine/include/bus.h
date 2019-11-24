@@ -12,6 +12,10 @@ enum class OutputMode
     PAL, NTSC
 };
 
+// Palettes location in VROM - 0x2000
+static constexpr c6502_word_t PAL_BG = 0x3F00u,
+                              PAL_SPR = 0x3F10u;
+
 /*!
  * System bus, controls communication between all units, manages main memory.
  * Object of this class must be created prior to everything else.
@@ -22,6 +26,15 @@ class Bus
     // Internal RAM: 0x0000 ~ 0x2000.
     // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
     Storage<0x800> m_ram;
+
+    // Video memory, separate address space
+    Storage<0x2000> m_vram;
+
+    // Cartridge permanent RAM
+    Storage<0x2000> m_wram;
+
+    // Sprite memory, addressed by sprite index (0..63)
+    Storage<256> m_spriteMem;
 
     // Modules
     CPU6502 *m_pCPU = nullptr;
@@ -72,16 +85,27 @@ public:
         return m_pCart;
     }
 
-    // Interrupts dispatching functions
-    void generateIRQ();
-    void generateNMI();
+    void runFrame();
 
-    void updateScreen();
     void testKeys();
 
-    // Memory request dispatching functions
-    c6502_byte_t read(c6502_word_t addr);
-    void write(c6502_word_t addr, c6502_byte_t val);
+    // CPU address space memory requests dispatching functions
+    c6502_byte_t readMem(c6502_word_t addr);
+    void writeMem(c6502_word_t addr, c6502_byte_t val);
+
+    // PPU address space access functions
+    c6502_byte_t readVideoMem(c6502_word_t addr) const noexcept;
+    void writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept;
+
+    c6502_byte_t readSpriteMem(c6502_word_t addr) const noexcept
+    {
+        return m_spriteMem.Read(addr);
+    }
+
+    void writeSpriteMem(c6502_word_t addr, c6502_byte_t val) noexcept
+    {
+        m_spriteMem.Write(addr, val);
+    }
 };
 
 #endif

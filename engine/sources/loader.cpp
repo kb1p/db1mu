@@ -118,14 +118,14 @@ void ROMLoader::loadNES(const char *file)
         for (int i = 0; i < m_hdr.nROMs; i++)
         {
             sread(rom, Mapper::ROM_SIZE, in);
-            map->addROMBank(rom);
+            map->setROMBank(i, rom);
         }
 
         c6502_byte_t vrom[Mapper::VROM_SIZE];
         for (int i = 0; i < m_hdr.nVROMs; i++)
         {
             sread(vrom, Mapper::VROM_SIZE, in);
-            map->addVROMBank(vrom);
+            map->setVROMBank(i, vrom);
         }
 
         // No data left

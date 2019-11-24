@@ -28,16 +28,23 @@
 
 #include "b1mainwindow.h"
 #include "ui_b1mainwindow.h"
-#include "b1.h"
+#include "log.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QFileDialog>
+#include <iostream>
 
 b1MainWindow::b1MainWindow()
 {
     ui = new Ui::b1MainWindow;
     ui->setupUi ( this );
+
+    auto &logCfg = Log::instance().config();
+    logCfg.pOutput = &std::cout;
+    logCfg.filter = Log::LEVEL_DEBUG;
+    logCfg.autoFlush = true;
 
     m_screen = new ScreenWidget(this);
     setCentralWidget(m_screen);
@@ -48,13 +55,13 @@ b1MainWindow::~b1MainWindow()
     delete ui;
 }
 
-void b1MainWindow::closeEvent ( QCloseEvent *e )
+void b1MainWindow::closeEvent(QCloseEvent *e)
 {
-    int r = QMessageBox::question ( this,
-                                    tr ( "Confirm exit" ),
-                                    tr ( "Are you sure want to quit?" ),
-                                    QMessageBox::Yes | QMessageBox::No );
-    if ( r == QMessageBox::Yes )
+    const auto r = QMessageBox::question(this,
+                                         tr("Confirm exit"),
+                                         tr("Are you sure want to quit?"),
+                                         QMessageBox::Yes | QMessageBox::No);
+    if (r == QMessageBox::Yes)
     {
         e->accept();
         //foo();
@@ -63,5 +70,15 @@ void b1MainWindow::closeEvent ( QCloseEvent *e )
     {
         e->ignore();
     }
+}
+
+void b1MainWindow::openROM()
+{
+    const auto fn = QFileDialog::getOpenFileName(this,
+                                                 tr("Select ROM file"),
+                                                 tr("."),
+                                                 tr("NES ROM images (*.nes)"));
+    if (!fn.isNull())
+        m_screen->loadROM(fn);
 }
 

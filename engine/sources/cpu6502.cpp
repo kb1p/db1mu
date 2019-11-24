@@ -7,6 +7,10 @@
  * TODO: replace all these magic numbers with #defines at least.
  */
 
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wconversion"
+#endif
+
 #include "cpu6502.h"
 #include "debugger.h"
 #include "Cartridge.h"
@@ -15,11 +19,10 @@
 #include <stddef.h>
 #include <cassert>
 
+typedef unsigned int uint;
+
 // TRACE shorthand for branching operations
 #define TRACE_B(name, c) TRACE(name " cond=%s", (c) ? "true" : "false")
-
-// Tacts per period: { PAL, NTSC }
-static const int TPP[2] = { 59182, 71595 };
 
 template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP>() noexcept
@@ -119,7 +122,7 @@ c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND>() noexcept
          ah = readMem(m_regs.pc++);
     const c6502_word_t opaddr = combine(al, ah);
     al = readMem(opaddr);
-    ah = readMem(opaddr + 1);
+    ah = readMem((opaddr & 0xFF00u) | ((opaddr + 1) & 0xFFu));
 
     const auto ea = combine(al, ah);
     TRACE("Mode = IND; addr = %X", ea);
@@ -128,10 +131,10 @@ c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IND>() noexcept
 }
 
 template <>
-c6502_byte_t CPU6502::fetchOperand<CPU6502::AM::IMM>() noexcept
+c6502_word_t CPU6502::fetchAddr<CPU6502::AM::IMM>() noexcept
 {
-    const auto eo = readMem(m_regs.pc++);
-    TRACE("Mode = IMM; op. value = %X", eo);
+    const auto eo = m_regs.pc++;
+    TRACE("Mode = IMM; addr = %X", eo);
     return eo;
 }
 
@@ -154,11 +157,11 @@ void CPU6502::cmd_##name<CPU6502::AM::mode>() noexcept
 CMD_DEF(ADC)
 {
     TRACE("ADC");
-    const c6502_word_t op = fetchOperand<MODE>();
-    const c6502_word_t r = static_cast<c6502_word_t>(m_regs.a) + getFlag<Flag::C>() + op;
+    const uint op = fetchOperand<MODE>();
+    const uint r = op + m_regs.a + getFlag<Flag::C>();
 
     eval_C(r);
-    eval_Z(r);
+    eval_Z(r & 0xFFu);
     eval_N(r);
     setFlag<Flag::V>(((m_regs.a ^ op) & 0x80u) == 0u && ((m_regs.a ^ r) & 0x80u) != 0u ? 1u : 0u);
 
@@ -224,11 +227,10 @@ CMD_DEF(BIT)
 {
     TRACE("BIT");
     const auto op = fetchOperand<MODE>();
-    const auto r = m_regs.a & op;
 
-    eval_Z(r);
-    eval_N(r);
-    setFlag<Flag::V>((r >> 6) & 0x1u);
+    eval_Z(m_regs.a & op);
+    eval_N(op);
+    setFlag<Flag::V>((op >> 6) & 0x1u);
 }
 
 CMD_DEF(BMI)
@@ -307,12 +309,12 @@ CMD_DEF(CMP)
     TRACE("CMP");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.a;
+    uint r = m_regs.a;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(CPX)
@@ -320,12 +322,12 @@ CMD_DEF(CPX)
     TRACE("CPX");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.x;
+    uint r = m_regs.x;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(CPY)
@@ -333,12 +335,12 @@ CMD_DEF(CPY)
     TRACE("CPY");
     const auto op = fetchOperand<MODE>();
 
-    int r = m_regs.y;
+    uint r = m_regs.y;
     r -= op;
 
-    setFlag<Flag::C>(r < 0x100 ? 1 : 0);
-    eval_Z(static_cast<c6502_byte_t>(r & 0xFF));
-    eval_N(static_cast<c6502_byte_t>(r & 0xFF));
+    setFlag<Flag::C>(r < 0x100u ? 1u : 0u);
+    eval_Z(static_cast<c6502_byte_t>(r & 0xFFu));
+    eval_N(static_cast<c6502_byte_t>(r & 0xFFu));
 }
 
 CMD_DEF(DEC)
@@ -415,6 +417,7 @@ CMD_DEF(JSR)
 {
     TRACE("JSR");
     const auto where = fetchAddr<MODE>();
+    m_regs.pc--;
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
     m_regs.pc = where;
@@ -507,6 +510,7 @@ CMD_DEF(PLP)
 {
     TRACE("PLP");
     m_regs.p = pop();
+    m_regs.p |= 0x20u;
 }
 
 CMD_DEF(ROL)
@@ -569,6 +573,7 @@ CMD_DEF(RTI)
 {
     TRACE("RTI");
     m_regs.p = pop();
+    m_regs.p |= 0x20u;
     const auto ral = pop(),
                rah = pop();
     m_regs.pc = combine(ral, rah);
@@ -579,15 +584,15 @@ CMD_DEF(RTS)
     TRACE("RTS");
     const auto ral = pop(),
                rah = pop();
-    m_regs.pc = combine(ral, rah);
+    m_regs.pc = combine(ral, rah) + 1u;
 }
 
 CMD_DEF(SBC)
 {
     TRACE("SBC");
-    const int op = fetchOperand<MODE>(),
-              borrow = getFlag<Flag::C>() ^ 1;
-    const int r = static_cast<int>(m_regs.a) - op - borrow;
+    const uint op = fetchOperand<MODE>(),
+               borrow = getFlag<Flag::C>() ^ 1u;
+    const uint r = static_cast<uint>(m_regs.a) - op - borrow;
     const auto br = static_cast<c6502_byte_t>(r & 0xFF);
     eval_N(br);
     eval_Z(br);
@@ -896,10 +901,8 @@ void CPU6502::initOpHandlers() noexcept
 }
 
 /*** CPU class implementation ***/
-CPU6502::CPU6502(Mode mode, Bus &bus)
-    : m_mode(mode)
-    , m_state(STATE_HALTED)
-    , m_period(0)
+CPU6502::CPU6502(Bus &bus)
+    : m_state(STATE_HALTED)
     , m_bus { bus }
 {
     // Static initializer
@@ -912,14 +915,6 @@ CPU6502::CPU6502(Mode mode, Bus &bus)
     }
 }
 
-void CPU6502::updateScreen()
-{
-}
-
-void CPU6502::testKeys()
-{
-}
-
 void CPU6502::reset()
 {
     m_regs.a = m_regs.x = m_regs.y = 0;
@@ -928,13 +923,14 @@ void CPU6502::reset()
     const auto pcl = readMem(0xFFFC),
                pch = readMem(0xFFFD);
     m_regs.pc = combine(pcl, pch);
-    m_period = TPP[m_mode];
+
     m_state = STATE_RUN;
 }
 
 // Handle maskable interrupt
-void CPU6502::IRQ()
+int CPU6502::IRQ()
 {
+    int clk = 0;
     if (getFlag<Flag::I>() == 0)
     {
         Log::v("IRQ");
@@ -949,42 +945,47 @@ void CPU6502::IRQ()
                    pch = readMem(0xFFFF);
         m_regs.pc = combine(pcl, pch);
 
-        m_period -= 7;
+        clk = 7;
     }
+    return clk;
 }
 
 // Handle non-maskable interrupt
-void CPU6502::NMI()
+int CPU6502::NMI()
 {
     Log::v("NMI");
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
+    setFlag<Flag::B>(0);
     push(m_regs.p);
+    setFlag<Flag::I>(1);
 
     const auto pcl = readMem(0xFFFA),
                pch = readMem(0xFFFB);
     m_regs.pc = combine(pcl, pch);
 
-    m_period -= 7;
+    return 7;
 }
 
-void CPU6502::clock()
+int CPU6502::run(int clk) noexcept
 {
-    if (m_state == STATE_RUN)
+    assert(clk > 0);
+    int realClocks = 0;
+    while (realClocks < clk)
     {
-        m_period -= step();
-        if (m_period <= 0)
+        switch (m_state)
         {
-            m_period += TPP[m_mode];
-            updateScreen();
-            testKeys();
-            NMI();
+            case STATE_RUN:
+                realClocks += step();
+                break;
+            case STATE_ERROR:
+                Log::e("Unexpected CPU state (%d)", m_state);
+            case STATE_HALTED:
+                return 0;
         }
     }
-    else
-    {
-        Log::e("Unexpected CPU state (%d)", m_state);
-    }
+
+    return realClocks;
 }
 
 int CPU6502::step()
