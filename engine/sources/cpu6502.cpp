@@ -417,6 +417,7 @@ CMD_DEF(JSR)
 {
     TRACE("JSR");
     const auto where = fetchAddr<MODE>();
+    m_regs.pc--;
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
     m_regs.pc = where;
@@ -583,7 +584,7 @@ CMD_DEF(RTS)
     TRACE("RTS");
     const auto ral = pop(),
                rah = pop();
-    m_regs.pc = combine(ral, rah);
+    m_regs.pc = combine(ral, rah) + 1u;
 }
 
 CMD_DEF(SBC)

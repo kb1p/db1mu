@@ -143,24 +143,19 @@ private:
     void branchIf() noexcept
     {
         constexpr c6502_byte_t n = IS_SET ? 0 : 1;
+        const auto rdis = fetchOperand<AM::IMM>();
         if (getFlag<F>() ^ n)
         {
             m_penalty = 1;
             const c6502_byte_t oldPC_h = hi_byte(m_regs.pc - 1);
-            auto rdis = fetchOperand<AM::IMM>();
             if (rdis & 0x80u)
-            {
-                rdis = ~rdis + 1u;
-                m_regs.pc -= rdis;
-            }
+                m_regs.pc -= 0x100u - rdis;
             else
                 m_regs.pc += rdis;
             TRACE("Branch to %X", m_regs.pc);
             if (oldPC_h != hi_byte(m_regs.pc))
                 m_penalty = 2;
         }
-        else
-            ++m_regs.pc;
     }
 
     template <typename T>
