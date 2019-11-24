@@ -21,7 +21,7 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
         case STATE:
             if (!m_enableWrite)
                 rv |= bit<4>();
-            if (m_spritesOnLine > 8)
+            if (m_over8sprites)
                 rv |= bit<5>();
             if (m_sprite0)
             {
@@ -248,6 +248,10 @@ void PPU::buildImage() noexcept
         }
     }
 
+    // Sprite counters for each horizontal / vertical line
+    int hsc[256] = { },
+        vsc[240] = { };
+    m_over8sprites = m_sprite0 = false;
     if (m_spritesVisible)
     {
         for (c6502_word_t ns = 0; ns < 64u; ns++)
@@ -257,6 +261,10 @@ void PPU::buildImage() noexcept
                        nChar = m_bus.readSpriteMem(i + 1),
                        attrs = m_bus.readSpriteMem(i + 2),
                        x = m_bus.readSpriteMem(i + 3);
+            if (++hsc[x] > 8)
+                m_over8sprites = true;
+            if (++vsc[y] > 8)
+                m_over8sprites = true;
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::BEHIND :
                              RenderingBackend::Layer::FRONT;

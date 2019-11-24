@@ -99,12 +99,14 @@ private:
     // Push to / pop from the stack shorthands
     void push(c6502_byte_t v) noexcept
     {
-        writeMem(0x100 | m_regs.s--, v);
+        assert(m_regs.s > 0u && "Stack overflow");
+        writeMem(0x100u | static_cast<c6502_word_t>(m_regs.s--), v);
     }
 
     c6502_byte_t pop() noexcept
     {
-        return readMem(0x100 | (++m_regs.s));
+        assert(m_regs.s < 0xFFu && "Stack underflow");
+        return readMem(0x100u | static_cast<c6502_word_t>(++m_regs.s));
     }
 
     // Get the byte PC points to and increase PC by 1

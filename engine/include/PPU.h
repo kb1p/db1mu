@@ -84,14 +84,14 @@ private:
          m_fullBacgroundVisible = false,
          m_vblank = false,
          m_sprite0 = false,
-         m_enableWrite = false;
+         m_enableWrite = true,
+         m_over8sprites = false;
     c6502_word_t m_baBkgnd = 0,
                  m_baSprites = 0,
                  m_addrIncr = 1,
                  m_activePage = 0x2000u;
     c6502_word_t m_vramAddr = 0,
                  m_sprmemAddr = 0;
-    int m_spritesOnLine = 0;
     c6502_byte_t m_scrollV = 0,
                  m_scrollH = 0;
     int m_currScrollReg = 0;
