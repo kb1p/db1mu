@@ -3,14 +3,31 @@
 
 #include <QOpenGLWidget>
 
+class Bus;
+class GLRenderingBackend;
+
 class ScreenWidget: public QOpenGLWidget
 {
 public:
     ScreenWidget(QWidget *parent = nullptr);
     ~ScreenWidget();
 
-    void loadROM(const QString &fn);
-    void reset(bool soft);
+    void setBus(Bus *pBus) noexcept
+    {
+        Q_ASSERT(pBus != nullptr);
+        m_pBus = pBus;
+    }
+
+    void pause();
+    void step();
+    void resume();
+
+    bool isRunning() const noexcept;
+
+    GLRenderingBackend *getRenderingBackend() const noexcept
+    {
+        return m_pRBE;
+    }
 
 protected:
     void initializeGL() override;
@@ -19,8 +36,9 @@ protected:
     void timerEvent(QTimerEvent *event) override;
 
 private:
-    struct NESEngine *m_pEng = nullptr;
+    Bus *m_pBus = nullptr;
     int m_timerId = 0;
+    GLRenderingBackend *m_pRBE = nullptr;
 };
 
 #endif

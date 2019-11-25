@@ -28,7 +28,7 @@
 
 #include "b1mainwindow.h"
 #include "ui_b1mainwindow.h"
-#include "log.h"
+#include "glbe.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -36,18 +36,47 @@
 #include <QFileDialog>
 #include <iostream>
 
+#include <bus.h>
+#include <cpu6502.h>
+#include <PPU.h>
+#include <Cartridge.h>
+#include <loader.h>
+#include <log.h>
+
+struct NESEngine
+{
+     Bus bus;
+     CPU6502 cpu;
+     PPU ppu;
+     Cartrige cartridge;
+     bool ready = false;
+
+     NESEngine(OutputMode mode, PPU::RenderingBackend *pBackend):
+        bus { mode },
+        cpu { bus },
+        ppu { bus, pBackend }
+    {
+        bus.setCPU(&cpu);
+        bus.setPPU(&ppu);
+    }
+};
+
 b1MainWindow::b1MainWindow()
 {
     ui = new Ui::b1MainWindow;
     ui->setupUi ( this );
+
+    m_screen = new ScreenWidget(this);
+    setCentralWidget(m_screen);
 
     auto &logCfg = Log::instance().config();
     logCfg.pOutput = &std::cout;
     logCfg.filter = Log::LEVEL_DEBUG;
     logCfg.autoFlush = true;
 
-    m_screen = new ScreenWidget(this);
-    setCentralWidget(m_screen);
+    m_eng.reset(new NESEngine { OutputMode::NTSC,
+                                m_screen->getRenderingBackend() });
+    m_screen->setBus(&m_eng->bus);
 }
 
 b1MainWindow::~b1MainWindow()
@@ -79,6 +108,51 @@ void b1MainWindow::openROM()
                                                  tr("."),
                                                  tr("NES ROM images (*.nes)"));
     if (!fn.isNull())
-        m_screen->loadROM(fn);
+    {
+        if (m_screen->isRunning())
+            m_screen->pause();
+
+        ROMLoader loader { m_eng->cartridge };
+        try
+        {
+            loader.loadNES(fn.toLocal8Bit().data());
+            m_eng->bus.injectCartrige(&m_eng->cartridge);
+            m_screen->resume();
+        }
+        catch (const Exception &ex)
+        {
+            QMessageBox::critical(this,
+                                  tr("Cannot load ROM"),
+                                  tr("Error: %1").arg(ex.message()));
+        }
+        updateUI();
+    }
+}
+
+void b1MainWindow::pauseEmulation()
+{
+    m_screen->pause();
+
+    updateUI();
+}
+
+void b1MainWindow::resumeEmulation()
+{
+    m_screen->resume();
+
+    updateUI();
+}
+
+void b1MainWindow::stepEmulation()
+{
+    m_screen->step();
+}
+
+void b1MainWindow::updateUI()
+{
+    const bool r = m_screen->isRunning();
+    ui->actionPause->setEnabled(r);
+    ui->actionResume->setEnabled(!r);
+    ui->actionStep->setEnabled(!r);
 }
 

@@ -30,7 +30,16 @@
     <addaction name="separator"/>
     <addaction name="actionE_xit"/>
    </widget>
+   <widget class="QMenu" name="menuEmulation">
+    <property name="title">
+     <string>&amp;Emulation</string>
+    </property>
+    <addaction name="actionPause"/>
+    <addaction name="actionResume"/>
+    <addaction name="actionStep"/>
+   </widget>
    <addaction name="menu_File"/>
+   <addaction name="menuEmulation"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionE_xit">
@@ -47,6 +56,39 @@
    </property>
    <property name="toolTip">
     <string>Open ROM image</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Pause</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionResume">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Resume</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionStep">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>S&amp;tep 1 frame forward</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>
@@ -84,5 +126,58 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionPause</sender>
+   <signal>triggered()</signal>
+   <receiver>b1MainWindow</receiver>
+   <slot>pauseEmulation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>274</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionResume</sender>
+   <signal>triggered()</signal>
+   <receiver>b1MainWindow</receiver>
+   <slot>resumeEmulation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>274</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStep</sender>
+   <signal>triggered()</signal>
+   <receiver>b1MainWindow</receiver>
+   <slot>stepEmulation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>274</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>pauseEmulation()</slot>
+  <slot>resumeEmulation()</slot>
+  <slot>stepEmulation()</slot>
+ </slots>
 </ui>

@@ -31,11 +31,14 @@
 
 #include <QMainWindow>
 #include "screenwidget.h"
+#include <memory>
 
 namespace Ui
 {
 class b1MainWindow;
 }
+
+struct NESEngine;
 
 class b1MainWindow: public QMainWindow
 {
@@ -47,12 +50,19 @@ public:
 protected:
     void closeEvent(QCloseEvent *e) override;
 
+    void updateUI();
+
 protected Q_SLOTS:
     void openROM();
+    void pauseEmulation();
+    void resumeEmulation();
+    void stepEmulation();
 
 private:
     Ui::b1MainWindow* ui;
     ScreenWidget *m_screen;
+
+    std::unique_ptr<NESEngine> m_eng;
 };
 
 #endif // B1MAINWINDOW_H

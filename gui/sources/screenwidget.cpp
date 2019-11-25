@@ -1,37 +1,14 @@
 #include "screenwidget.h"
+#include "glbe.h"
 
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QSurfaceFormat>
 #include <QMessageBox>
 #include <QTimerEvent>
+#include <QDebug>
 
 #include <bus.h>
-#include <cpu6502.h>
-#include <PPU.h>
-#include <Cartridge.h>
-#include <loader.h>
-
-#include "glbe.h"
-
-struct NESEngine
-{
-     Bus bus;
-     CPU6502 cpu;
-     GLRenderingBackend renderer;
-     PPU ppu;
-     Cartrige cartridge;
-     bool ready = false;
-
-     NESEngine(OutputMode mode):
-        bus { mode },
-        cpu { bus },
-        ppu { bus, &renderer }
-    {
-        bus.setCPU(&cpu);
-        bus.setPPU(&ppu);
-    }
-};
 
 ScreenWidget::ScreenWidget(QWidget *parent):
     QOpenGLWidget { parent }
@@ -48,41 +25,42 @@ ScreenWidget::ScreenWidget(QWidget *parent):
 
     setFormat(fmt);
 
-    m_pEng = new NESEngine { OutputMode::NTSC };
+    m_pRBE = new GLRenderingBackend;
 }
 
 ScreenWidget::~ScreenWidget()
 {
-    delete m_pEng;
+    delete m_pRBE;
 }
 
-void ScreenWidget::loadROM(const QString &fn)
+bool ScreenWidget::isRunning() const noexcept
 {
-    if (m_timerId != 0)
-        killTimer(m_timerId);
+    return m_pBus->getCartrige() != nullptr && m_timerId != 0;
+}
 
-    m_pEng->ready = false;
-    ROMLoader loader(m_pEng->cartridge);
-    try
-    {
-        loader.loadNES(fn.toLocal8Bit().data());
-        m_pEng->bus.injectCartrige(&m_pEng->cartridge);
-        m_pEng->ready = true;
-        m_timerId = startTimer(17, Qt::PreciseTimer);
-    }
-    catch (const Exception &ex)
-    {
-        QMessageBox::critical(this,
-                              tr("Cannot load ROM"),
-                              tr("Error: %1").arg(ex.message()));
-    }
+void ScreenWidget::pause()
+{
+    Q_ASSERT(m_timerId != 0);
+    killTimer(m_timerId);
+    m_timerId = 0;
+}
+
+void ScreenWidget::resume()
+{
+    Q_ASSERT(m_timerId == 0);
+    m_timerId = startTimer(17, Qt::PreciseTimer);
+}
+
+void ScreenWidget::step()
+{
+    repaint();
 }
 
 void ScreenWidget::initializeGL()
 {
     try
     {
-        m_pEng->renderer.init(context()->functions());
+        m_pRBE->init(context()->functions());
     }
     catch (Exception &ex)
     {
@@ -98,16 +76,15 @@ void ScreenWidget::resizeGL(int w, int h)
 
 void ScreenWidget::timerEvent(QTimerEvent *event)
 {
-    if (event->timerId() == m_timerId)
-        repaint();
+    Q_ASSERT(event->timerId() == m_timerId);
+    repaint();
 }
 
 void ScreenWidget::paintGL()
 {
-    if (m_pEng->ready)
-    {
-        m_pEng->bus.runFrame();
-    }
+    Q_ASSERT(m_pBus);
+    if (m_pBus->getCartrige() != nullptr)
+        m_pBus->runFrame();
     else
     {
         const auto g = context()->functions();
