@@ -121,7 +121,7 @@ void GLRenderingBackend::release()
 void GLRenderingBackend::setBackground(c6502_byte_t color)
 {
     assert(m_gl != nullptr);
-    const auto c = color256(color);
+    const auto c = color256(m_palette[color & 0x3Fu]);
     m_gl->glClearColor(c[0], c[1], c[2], 1);
     m_gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
@@ -129,21 +129,14 @@ void GLRenderingBackend::setBackground(c6502_byte_t color)
 void GLRenderingBackend::setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64])
 {
     // Test data
-    GLint charData[64] = {
-        // red, green, blue, cyan, magenta, yellow, black, white
-        0b01110000, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF,
-        0b01110000, 0b01110000, 0b01110000, 0b01110000, 0b01110000, 0b01110000, 0b01110000, 0b01110000,
-        0b10110000, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF,
-        0b11110000, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF,
-        0b01110000, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF,
-        0b01110000, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF,
-        0b01000011, 0b01000011, 0b01000011, 0b01000011, 0b01000011, 0b01000011, 0b01000011, 0b01000011,
-        0b01110001, 0b10001101, 0b10000011, 0b10001111, 0b10110011, 0b10111101, 0, 0xFF
-    };
+    GLint charData[64];
 
     for (int i = 0; i < 64; i++)
-        charData[i] = colorData[i];
-    
+    {
+        const auto &c = colorData[i];
+        charData[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
+    }
+
     const GLint z = l == Layer::BEHIND ? 2 :
                     l == Layer::BACKGROUND ? 1 :
                     0;
