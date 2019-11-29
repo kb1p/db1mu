@@ -77,6 +77,8 @@ b1MainWindow::b1MainWindow()
     m_eng.reset(new NESEngine { OutputMode::NTSC,
                                 m_screen->getRenderingBackend() });
     m_screen->setBus(&m_eng->bus);
+
+    connect(m_screen, SIGNAL(fpsChanged(float)), SLOT(fpsUpdated(float)));
 }
 
 b1MainWindow::~b1MainWindow()
@@ -156,3 +158,7 @@ void b1MainWindow::updateUI()
     ui->actionStep->setEnabled(!r);
 }
 
+void b1MainWindow::fpsUpdated(float fps)
+{
+    statusBar()->showMessage(tr("%1 FPS").arg(fps, 5, 'f', 0));
+}

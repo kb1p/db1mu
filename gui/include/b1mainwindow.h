@@ -43,6 +43,7 @@ struct NESEngine;
 class b1MainWindow: public QMainWindow
 {
     Q_OBJECT
+
 public:
     b1MainWindow();
     ~b1MainWindow();
@@ -57,6 +58,7 @@ protected Q_SLOTS:
     void pauseEmulation();
     void resumeEmulation();
     void stepEmulation();
+    void fpsUpdated(float fps);
 
 private:
     Ui::b1MainWindow* ui;

@@ -48,11 +48,14 @@ void ScreenWidget::pause()
 void ScreenWidget::resume()
 {
     Q_ASSERT(m_timerId == 0);
+    m_nFrames = m_accFrameTimes = 0;
+    m_clocks.start();
     m_timerId = startTimer(17, Qt::PreciseTimer);
 }
 
 void ScreenWidget::step()
 {
+    m_nFrames = m_accFrameTimes = 0;
     repaint();
 }
 
@@ -84,7 +87,22 @@ void ScreenWidget::paintGL()
 {
     Q_ASSERT(m_pBus);
     if (m_pBus->getCartrige() != nullptr)
+    {
+        const int dt = m_clocks.restart();
+        if (m_nFrames++ > 0)
+        {
+            if (m_nFrames < 60)
+                m_accFrameTimes += dt;
+            else
+            {
+                Q_EMIT fpsChanged(m_nFrames * 1000.0f / m_accFrameTimes);
+                m_nFrames = 1;
+                m_accFrameTimes = dt;
+            }
+        }
+
         m_pBus->runFrame();
+    }
     else
     {
         const auto g = context()->functions();

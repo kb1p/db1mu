@@ -2,12 +2,15 @@
 #define SCREENWIDGET_H
 
 #include <QOpenGLWidget>
+#include <QTime>
 
 class Bus;
 class GLRenderingBackend;
 
 class ScreenWidget: public QOpenGLWidget
 {
+    Q_OBJECT
+
 public:
     ScreenWidget(QWidget *parent = nullptr);
     ~ScreenWidget();
@@ -29,6 +32,9 @@ public:
         return m_pRBE;
     }
 
+Q_SIGNALS:
+    void fpsChanged(float);
+
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -39,6 +45,10 @@ private:
     Bus *m_pBus = nullptr;
     int m_timerId = 0;
     GLRenderingBackend *m_pRBE = nullptr;
+
+    QTime m_clocks;
+    int m_accFrameTimes = 0,
+        m_nFrames = 0;
 };
 
 #endif
