@@ -23,6 +23,7 @@ ScreenWidget::ScreenWidget(QWidget *parent):
     fmt.setAlphaBufferSize(1);
 
     setFormat(fmt);
+    //setUpdateBehavior(QOpenGLWidget::PartialUpdate);
 
     m_pRBE = new GLRenderingBackend;
 }
@@ -34,12 +35,13 @@ ScreenWidget::~ScreenWidget()
 
 bool ScreenWidget::isRunning() const noexcept
 {
-    return m_pBus->getCartrige() != nullptr && m_timerId != 0;
+    return m_runEmulation;
 }
 
 void ScreenWidget::pause()
 {
     Q_ASSERT(m_timerId != 0);
+    m_runEmulation = false;
     killTimer(m_timerId);
     m_timerId = 0;
 }
@@ -48,6 +50,7 @@ void ScreenWidget::resume()
 {
     Q_ASSERT(m_timerId == 0);
     m_nFrames = m_accFrameTimes = 0;
+    m_runEmulation = true;
     m_clocks.start();
     m_timerId = startTimer(17, Qt::PreciseTimer);
 }
@@ -55,7 +58,9 @@ void ScreenWidget::resume()
 void ScreenWidget::step()
 {
     m_nFrames = m_accFrameTimes = 0;
+    m_runEmulation = true;
     repaint();
+    m_runEmulation = false;
 }
 
 void ScreenWidget::initializeGL()
@@ -85,7 +90,7 @@ void ScreenWidget::timerEvent(QTimerEvent *event)
 void ScreenWidget::paintGL()
 {
     Q_ASSERT(m_pBus);
-    if (m_pBus->getCartrige() != nullptr)
+    if (m_runEmulation)
     {
         const int dt = m_clocks.restart();
         if (m_nFrames++ > 0)
@@ -102,7 +107,7 @@ void ScreenWidget::paintGL()
 
         m_pBus->runFrame();
     }
-    else
+    else if (!m_pBus->getCartrige())
     {
         const auto g = context()->functions();
         g->glClearColor(1, 1, 1, 1);

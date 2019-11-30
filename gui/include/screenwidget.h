@@ -45,6 +45,7 @@ private:
     Bus *m_pBus = nullptr;
     int m_timerId = 0;
     GLRenderingBackend *m_pRBE = nullptr;
+    bool m_runEmulation = false;
 
     QTime m_clocks;
     int m_accFrameTimes = 0,
