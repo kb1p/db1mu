@@ -21,7 +21,6 @@ ScreenWidget::ScreenWidget(QWidget *parent):
     fmt.setGreenBufferSize(2);
     fmt.setBlueBufferSize(2);
     fmt.setAlphaBufferSize(1);
-    fmt.setDepthBufferSize(16);
 
     setFormat(fmt);
 

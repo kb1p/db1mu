@@ -42,10 +42,9 @@ void GLRenderingBackend::init(QOpenGLFunctions *glFunctions)
     m_gl->glFrontFace(GL_CCW);
     m_gl->glCullFace(GL_BACK);
     m_gl->glEnable(GL_CULL_FACE);
-    m_gl->glEnable(GL_DEPTH_TEST);
-    m_gl->glDepthFunc(GL_LEQUAL);
     m_gl->glEnable(GL_BLEND);
     m_gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    m_gl->glDisable(GL_DEPTH_TEST);
 
     m_shdr = m_gl->glCreateProgram();
 
@@ -128,27 +127,59 @@ void GLRenderingBackend::setBackground(c6502_byte_t color)
 
 void GLRenderingBackend::setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64])
 {
+    CharacterData *pChar = nullptr;
+    switch (l)
+    {
+        case Layer::BEHIND:
+            m_layerBehind.emplace_back();
+            pChar = &m_layerBehind.back();
+            break;
+        case Layer::FRONT:
+            m_layerFront.emplace_back();
+            pChar = &m_layerFront.back();
+            break;
+        case Layer::BACKGROUND:
+            m_layerBg.emplace_back();
+            pChar = &m_layerBg.back();
+            break;
+    }
+    Q_ASSERT(pChar != nullptr);
+
+    pChar->x = x;
+    pChar->y = y;
+    memcpy(pChar->pixels, colorData, 64);
+}
+
+void GLRenderingBackend::renderCharacter(const CharacterData &chData) const noexcept
+{
     // Test data
-    GLint charData[64];
+    GLint pixelData[64];
 
     for (int i = 0; i < 64; i++)
     {
-        const auto &c = colorData[i];
-        charData[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
+        const auto &c = chData.pixels[i];
+        pixelData[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
     }
 
-    const GLint z = l == Layer::BEHIND ? 2 :
-                    l == Layer::BACKGROUND ? 1 :
-                    0;
-    
-    m_gl->glUniform3i(m_uPos, x, y, z);
-    m_gl->glUniform1iv(m_uSpriteData, 64, charData);
+    m_gl->glUniform2i(m_uPos, chData.x, chData.y);
+    m_gl->glUniform1iv(m_uSpriteData, 64, pixelData);
 
     m_gl->glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void GLRenderingBackend::draw()
 {
-    // Nothing to do, swap buffers happens automatically
+    // Render characters in proper order
+    for (const auto &c: m_layerBehind)
+        renderCharacter(c);
+    for (const auto &c: m_layerBg)
+        renderCharacter(c);
+    for (const auto &c: m_layerFront)
+        renderCharacter(c);
+
+    // Reset lists
+    m_layerBehind.clear();
+    m_layerBg.clear();
+    m_layerFront.clear();
 }
 

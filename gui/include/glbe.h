@@ -4,6 +4,7 @@
 #include <PPU.h>
 
 #include <QOpenGLFunctions>
+#include <vector>
 
 class GLRenderingBackend: public PPU::RenderingBackend
 {
@@ -33,7 +34,27 @@ class GLRenderingBackend: public PPU::RenderingBackend
         0b101111u, 0b101010u, 0b000000u, 0b000000u
     };
 
+    struct CharacterData
+    {
+        int x, y;
+        c6502_byte_t pixels[64];
+    };
+
+    // Character data sorted by layer
+    std::vector<CharacterData> m_layerBehind,
+                               m_layerBg,
+                               m_layerFront;
+
+    void renderCharacter(const CharacterData &chData) const noexcept;
+
 public:
+    GLRenderingBackend()
+    {
+        m_layerBehind.reserve(64);
+        m_layerFront.reserve(64);
+        m_layerBg.reserve(32 * 30);
+    }
+
     ~GLRenderingBackend()
     {
         release();
