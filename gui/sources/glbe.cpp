@@ -9,7 +9,7 @@ static const auto *VS_SRC =
 static const auto *FS_SRC =
 #include "../shaders/glbe_frag.glsl"
 
-std::array<GLfloat, 3> color256(c6502_byte_t c) noexcept
+std::array<GLfloat, 3> color64(c6502_byte_t c) noexcept
 {
     constexpr GLfloat stp = 1.0f / 3.0f;
     std::array<GLfloat, 3> r;
@@ -120,49 +120,46 @@ void GLRenderingBackend::release()
 void GLRenderingBackend::setBackground(c6502_byte_t color)
 {
     assert(m_gl != nullptr);
-    const auto c = color256(m_palette[color & 0x3Fu]);
+    const auto c = color64(m_palette[color & 0x3Fu]);
     m_gl->glClearColor(c[0], c[1], c[2], 1);
     m_gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void GLRenderingBackend::setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64])
 {
-    CharacterData *pChar = nullptr;
+    TileData *pChar = nullptr;
     switch (l)
     {
         case Layer::BEHIND:
-            m_layerBehind.emplace_back();
-            pChar = &m_layerBehind.back();
+            pChar = &m_layerBehind[m_nTilesBehind++];
+            Q_ASSERT(m_nTilesBehind <= MAX_TILES_BEHIND);
             break;
         case Layer::FRONT:
-            m_layerFront.emplace_back();
-            pChar = &m_layerFront.back();
+            pChar = &m_layerFront[m_nTilesFront++];
+            Q_ASSERT(m_nTilesFront <= MAX_TILES_FRONT);
             break;
         case Layer::BACKGROUND:
-            m_layerBg.emplace_back();
-            pChar = &m_layerBg.back();
+            pChar = &m_layerBg[m_nTilesBg++];
+            Q_ASSERT(m_nTilesBg <= MAX_TILES_BACKGROUND);
             break;
     }
     Q_ASSERT(pChar != nullptr);
 
     pChar->x = x;
     pChar->y = y;
-    memcpy(pChar->pixels, colorData, 64);
-}
 
-void GLRenderingBackend::renderCharacter(const CharacterData &chData) const noexcept
-{
-    // Test data
-    GLint pixelData[64];
-
+    // Convert NES character (NES palette) into tile (RGB palette)
     for (int i = 0; i < 64; i++)
     {
-        const auto &c = chData.pixels[i];
-        pixelData[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
+        const auto &c = colorData[i];
+        pChar->pixels[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
     }
+}
 
-    m_gl->glUniform2i(m_uPos, chData.x, chData.y);
-    m_gl->glUniform1iv(m_uSpriteData, 64, pixelData);
+void GLRenderingBackend::renderCharacter(const TileData &tData) const noexcept
+{
+    m_gl->glUniform2i(m_uPos, tData.x, tData.y);
+    m_gl->glUniform1iv(m_uSpriteData, 64, tData.pixels);
 
     m_gl->glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
@@ -170,16 +167,15 @@ void GLRenderingBackend::renderCharacter(const CharacterData &chData) const noex
 void GLRenderingBackend::draw()
 {
     // Render characters in proper order
-    for (const auto &c: m_layerBehind)
-        renderCharacter(c);
-    for (const auto &c: m_layerBg)
-        renderCharacter(c);
-    for (const auto &c: m_layerFront)
-        renderCharacter(c);
+    int i;
+    for (i = 0; i < m_nTilesBehind; i++)
+        renderCharacter(m_layerBehind[i]);
+    for (i = 0; i < m_nTilesBg; i++)
+        renderCharacter(m_layerBg[i]);
+    for (i = 0; i < m_nTilesFront; i++)
+        renderCharacter(m_layerFront[i]);
 
     // Reset lists
-    m_layerBehind.clear();
-    m_layerBg.clear();
-    m_layerFront.clear();
+    m_nTilesBehind = m_nTilesBg = m_nTilesFront = 0;
 }
 
