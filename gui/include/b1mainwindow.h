@@ -31,6 +31,7 @@
 
 #include <QMainWindow>
 #include "screenwidget.h"
+#include "cpustate.h"
 #include <memory>
 
 namespace Ui
@@ -61,8 +62,9 @@ protected Q_SLOTS:
     void fpsUpdated(float fps);
 
 private:
-    Ui::b1MainWindow* ui;
-    ScreenWidget *m_screen;
+    Ui::b1MainWindow *m_ui = nullptr;
+    ScreenWidget *m_screen = nullptr;
+    CPUStateDialog *m_cpuState = nullptr;
 
     std::unique_ptr<NESEngine> m_eng;
 };

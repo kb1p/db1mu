@@ -46,8 +46,8 @@ void Debugger::Interact()
     char cmdLine[256];
     DebugCommand cmd;
     do {
-        auto cpu = m_bus.getCPU();
-        std::cout << "(db1mu-dbg)" << std::hex << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc) << "> ";
+        const auto cpuRegs = m_bus.getCPU()->registerStates();
+        std::cout << "(db1mu-dbg)" << std::hex << std::setfill('0') << std::setw(4) << int(cpuRegs.pc) << "> ";
         std::cin.getline(cmdLine, sizeof(cmdLine));
         if (std::cin.eof()) {
             std::cout << "\n^D\n\n";
@@ -103,16 +103,17 @@ DebugCommand Debugger::ParseDebugCommand(const char *cmdLine)
 
 void Debugger::PrintCPUState()
 {
-    auto cpu = m_bus.getCPU();
+    const auto cpu = m_bus.getCPU();
+    const auto cpuRegs = cpu->registerStates();
     std::cout << "| a| x| y| s| p|\t| pc |\t|c|z|i|d|b|v|n|\n";
     std::cout << std::hex
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.a)
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.x)
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.y)
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.s)
-    << "|" << std::setfill('0') << std::setw(2) << int(cpu->m_regs.p)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpuRegs.a)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpuRegs.x)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpuRegs.y)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpuRegs.s)
+    << "|" << std::setfill('0') << std::setw(2) << int(cpuRegs.p)
     << "|" << "\t"
-    << "|" << std::setfill('0') << std::setw(4) << int(cpu->m_regs.pc)
+    << "|" << std::setfill('0') << std::setw(4) << int(cpuRegs.pc)
     << "|" << "\t"
     << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::C>())
     << "|" << std::setfill('0') << std::setw(1) << int(cpu->getFlag<CPU6502::Flag::Z>())

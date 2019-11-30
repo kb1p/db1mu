@@ -26,6 +26,24 @@ public:
         STATE_ERROR
     };
 
+    /* Layout:
+     * - accumulator
+     * - flags
+     * - X, Y indexes
+     * - stack pointer
+     * - program counter
+     */
+    struct Reg
+    {
+        c6502_byte_t a, x, y, s, p;
+        c6502_word_t pc;
+    };
+
+    enum class Flag: c6502_byte_t
+    {
+        C = 0, Z = 1, I = 2, D = 3, B = 4, V = 6, N = 7
+    };
+
     CPU6502(Bus &bus);
 
     int run(int clk) noexcept;
@@ -39,19 +57,20 @@ public:
         return m_state;
     }
 
-private:
-    /* Layout:
-     * - accumulator
-     * - flags
-     * - X, Y indexes
-     * - stack pointer
-     * - program counter
-     */
-    struct Reg
+    const Reg &registerStates() const noexcept
     {
-        c6502_byte_t a, x, y, s, p;
-        c6502_word_t pc;
-    } m_regs;
+        return m_regs;
+    }
+
+    template <Flag FLG>
+    c6502_byte_t getFlag() const noexcept
+    {
+        constexpr c6502_byte_t off = static_cast<c6502_byte_t>(FLG);
+        return (m_regs.p & (1u << off)) >> off;
+    }
+
+private:
+    Reg m_regs;
 
     State m_state;
     Bus &m_bus;
@@ -62,18 +81,6 @@ private:
     static constexpr int OPCODE_COUNT = 0xFF;
 
     static std::array<OpData, OPCODE_COUNT> s_opHandlers;
-
-    enum class Flag: c6502_byte_t
-    {
-        C = 0, Z = 1, I = 2, D = 3, B = 4, V = 6, N = 7
-    };
-
-    template <Flag FLG>
-    c6502_byte_t getFlag() const noexcept
-    {
-        constexpr c6502_byte_t off = static_cast<c6502_byte_t>(FLG);
-        return (m_regs.p & (1u << off)) >> off;
-    }
 
     template <Flag FLG>
     void setFlag(c6502_byte_t x) noexcept

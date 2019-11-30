@@ -63,10 +63,10 @@ struct NESEngine
 
 b1MainWindow::b1MainWindow()
 {
-    ui = new Ui::b1MainWindow;
-    ui->setupUi ( this );
+    m_ui = new Ui::b1MainWindow;
+    m_ui->setupUi ( this );
 
-    m_screen = new ScreenWidget(this);
+    m_screen = new ScreenWidget { this };
     setCentralWidget(m_screen);
 
     auto &logCfg = Log::instance().config();
@@ -79,11 +79,17 @@ b1MainWindow::b1MainWindow()
     m_screen->setBus(&m_eng->bus);
 
     connect(m_screen, SIGNAL(fpsChanged(float)), SLOT(fpsUpdated(float)));
+
+    m_cpuState = new CPUStateDialog { this };
+    QObject::connect(m_ui->actionShowCPU, SIGNAL(toggled(bool)),
+                     m_cpuState, SLOT(setVisible(bool)));
+    QObject::connect(m_cpuState, &CPUStateDialog::finished,
+                     [this](int) { m_ui->actionShowCPU->setChecked(false); });
 }
 
 b1MainWindow::~b1MainWindow()
 {
-    delete ui;
+    delete m_ui;
 }
 
 void b1MainWindow::closeEvent(QCloseEvent *e)
@@ -135,6 +141,7 @@ void b1MainWindow::pauseEmulation()
 {
     m_screen->pause();
 
+    m_cpuState->show(&m_eng->cpu);
     updateUI();
 }
 
@@ -142,20 +149,23 @@ void b1MainWindow::resumeEmulation()
 {
     m_screen->resume();
 
+    m_cpuState->clear();
     updateUI();
 }
 
 void b1MainWindow::stepEmulation()
 {
     m_screen->step();
+
+    m_cpuState->show(&m_eng->cpu);
 }
 
 void b1MainWindow::updateUI()
 {
     const bool r = m_screen->isRunning();
-    ui->actionPause->setEnabled(r);
-    ui->actionResume->setEnabled(!r);
-    ui->actionStep->setEnabled(!r);
+    m_ui->actionPause->setEnabled(r);
+    m_ui->actionResume->setEnabled(!r);
+    m_ui->actionStep->setEnabled(!r);
 }
 
 void b1MainWindow::fpsUpdated(float fps)

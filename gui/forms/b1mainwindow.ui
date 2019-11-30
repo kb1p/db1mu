@@ -38,8 +38,15 @@
     <addaction name="actionResume"/>
     <addaction name="actionStep"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="actionShowCPU"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menuEmulation"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionE_xit">
@@ -89,6 +96,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionShowCPU">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;CPU state</string>
    </property>
   </action>
  </widget>
