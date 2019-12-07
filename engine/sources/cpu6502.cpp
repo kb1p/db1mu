@@ -347,11 +347,11 @@ CMD_DEF(DEC)
 {
     TRACE("DEC");
     const auto addr = fetchAddr<MODE>();
-    const auto op = readMem(addr);
-    const auto r = op - 1;
-    eval_N(r);
-    eval_Z(r);
-    writeMem(addr, r);
+    auto v = readMem(addr);
+    v -= 1;
+    eval_N(v);
+    eval_Z(v);
+    writeMem(addr, v);
 }
 
 CMD_DEF(DEX)
@@ -383,11 +383,11 @@ CMD_DEF(INC)
 {
     TRACE("INC");
     const auto addr = fetchAddr<MODE>();
-    const auto op = readMem(addr);
-    const auto r = op + 1;
-    eval_N(r);
-    eval_Z(r);
-    writeMem(addr, r);
+    auto v = readMem(addr);
+    v += 1;
+    eval_N(v);
+    eval_Z(v);
+    writeMem(addr, v);
 }
 
 CMD_DEF(INX)
@@ -510,7 +510,6 @@ CMD_DEF(PLP)
 {
     TRACE("PLP");
     m_regs.p = pop();
-    m_regs.p |= 0x20u;
 }
 
 CMD_DEF(ROL)

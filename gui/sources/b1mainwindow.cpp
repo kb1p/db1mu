@@ -85,6 +85,11 @@ b1MainWindow::b1MainWindow()
                      m_cpuState, SLOT(setVisible(bool)));
     QObject::connect(m_cpuState, &CPUStateDialog::finished,
                      [this](int) { m_ui->actionShowCPU->setChecked(false); });
+    m_ppuState = new PPUStateDialog { this };
+    QObject::connect(m_ui->actionShowPPU, SIGNAL(toggled(bool)),
+                     m_ppuState, SLOT(setVisible(bool)));
+    QObject::connect(m_ppuState, &PPUStateDialog::finished,
+                     [this](int) { m_ui->actionShowPPU->setChecked(false); });
 }
 
 b1MainWindow::~b1MainWindow()
@@ -142,6 +147,7 @@ void b1MainWindow::pauseEmulation()
     m_screen->pause();
 
     m_cpuState->show(&m_eng->cpu);
+    m_ppuState->show(&m_eng->ppu);
     updateUI();
 }
 
@@ -150,6 +156,7 @@ void b1MainWindow::resumeEmulation()
     m_screen->resume();
 
     m_cpuState->clear();
+    m_ppuState->clear();
     updateUI();
 }
 
@@ -158,6 +165,7 @@ void b1MainWindow::stepEmulation()
     m_screen->step();
 
     m_cpuState->show(&m_eng->cpu);
+    m_ppuState->show(&m_eng->ppu);
 }
 
 void b1MainWindow::updateUI()

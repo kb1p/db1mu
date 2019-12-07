@@ -19,30 +19,30 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
     switch (n)
     {
         case STATE:
-            if (!m_enableWrite)
+            if (!m_st.enableWrite)
                 rv |= bit<4>();
-            if (m_over8sprites)
+            if (m_st.over8sprites)
                 rv |= bit<5>();
-            if (m_sprite0)
+            if (m_st.sprite0)
             {
                 rv |= bit<6>();
-                m_sprite0 = false;
+                m_st.sprite0 = false;
             }
-            if (m_vblank)
+            if (m_st.vblank)
             {
                 rv |= bit<7>();
-                m_vblank = false;
+                m_st.vblank = false;
             }
             break;
         case SPRMEM_DATA:
-            rv = m_bus.readSpriteMem(m_sprmemAddr++);
+            rv = m_bus.readSpriteMem(m_st.sprmemAddr++);
             break;
         case VIDMEM_DATA:
-            rv = m_bus.readVideoMem(m_vramAddr);
-            if (!m_vramReadError)
-                m_vramAddr += m_addrIncr;
+            rv = m_bus.readVideoMem(m_st.vramAddr);
+            if (!m_st.vramReadError)
+                m_st.vramAddr += m_st.addrIncr;
             else
-                m_vramReadError = false;
+                m_st.vramReadError = false;
             break;
         default:
             assert(false && "Illegal PPU register for reading");
@@ -61,22 +61,22 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             switch (val & 0b11u)
             {
                 case 0b00u:
-                    m_activePage = 0x2000u;
+                    m_st.activePage = 0x2000u;
                     break;
                 case 0b01u:
-                    m_activePage = 0x2400u;
+                    m_st.activePage = 0x2400u;
                     break;
                 case 0b10u:
-                    m_activePage = 0x2800u;
+                    m_st.activePage = 0x2800u;
                     break;
                 case 0b11u:
-                    m_activePage = 0x2C00u;
+                    m_st.activePage = 0x2C00u;
             }
-            m_addrIncr = test<2>(val) ? 32u : 1u;
-            m_baSprites = test<3>(val) ? 0x1000u : 0;
-            m_baBkgnd = test<4>(val) ? 0x1000u : 0;
-            m_bigSprites = test<5>(val);
-            m_enableNMI = test<7>(val);
+            m_st.addrIncr = test<2>(val) ? 32u : 1u;
+            m_st.baSprites = test<3>(val) ? 0x1000u : 0;
+            m_st.baBkgnd = test<4>(val) ? 0x1000u : 0;
+            m_st.bigSprites = test<5>(val);
+            m_st.enableNMI = test<7>(val);
 
             // DEBUG
             Log::v("active page = %X, "
@@ -85,60 +85,60 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
                    "bg chargen addr = %X, "
                    "big sprites = %d, "
                    "NMI enabled = %d, ",
-                   m_activePage,
-                   m_addrIncr,
-                   m_baSprites,
-                   m_baBkgnd,
-                   m_bigSprites,
-                   m_enableNMI);
+                   m_st.activePage,
+                   m_st.addrIncr,
+                   m_st.baSprites,
+                   m_st.baBkgnd,
+                   m_st.bigSprites,
+                   m_st.enableNMI);
             break;
         case CONTROL2:
-            m_fullBacgroundVisible = test<1>(val);
-            m_allSpritesVisible = test<2>(val);
-            m_backgroundVisible = test<3>(val);
-            m_spritesVisible = test<4>(val);
+            m_st.fullBacgroundVisible = test<1>(val);
+            m_st.allSpritesVisible = test<2>(val);
+            m_st.backgroundVisible = test<3>(val);
+            m_st.spritesVisible = test<4>(val);
 
             // Debug
             Log::v("bg visible = %d, "
                    "full bg = %d, "
                    "sprites visible = %d, "
                    "all sprites = %d, ",
-                   m_backgroundVisible,
-                   m_fullBacgroundVisible,
-                   m_spritesVisible,
-                   m_allSpritesVisible);
+                   m_st.backgroundVisible,
+                   m_st.fullBacgroundVisible,
+                   m_st.spritesVisible,
+                   m_st.allSpritesVisible);
             break;
         case SPRMEM_ADDR:
-            m_sprmemAddr = val;
-            Log::v("sprite address = %X", m_sprmemAddr);
+            m_st.sprmemAddr = val;
+            Log::v("sprite address = %X", m_st.sprmemAddr);
             break;
         case SPRMEM_DATA:
-            Log::v("write to sprite address = %X", m_sprmemAddr);
-            m_bus.writeSpriteMem(m_sprmemAddr++, val);
+            Log::v("write to sprite address = %X", m_st.sprmemAddr);
+            m_bus.writeSpriteMem(m_st.sprmemAddr++, val);
             break;
         case VIDMEM_ADDR:
-            m_vramAddr <<= 8;
-            m_vramAddr = (m_vramAddr & 0xFF00u) | (val & 0xFFu);
+            m_st.vramAddr <<= 8;
+            m_st.vramAddr = (m_st.vramAddr & 0xFF00u) | (val & 0xFFu);
 
             // Read error doesn't happen during palette access
-            m_vramReadError = m_vramAddr < 0x3F00u || m_vramAddr >= 0x3F20u;
-            Log::v("vram address = %X, read error = %d", m_vramAddr, m_vramReadError);
+            m_st.vramReadError = m_st.vramAddr < 0x3F00u || m_st.vramAddr >= 0x3F20u;
+            Log::v("vram address = %X, read error = %d", m_st.vramAddr, m_st.vramReadError);
             break;
         case VIDMEM_DATA:
-            Log::v("write to vram address = %X", m_vramAddr);
-            m_bus.writeVideoMem(m_vramAddr, val);
-            m_vramAddr += m_addrIncr;
+            Log::v("write to vram address = %X", m_st.vramAddr);
+            m_bus.writeVideoMem(m_st.vramAddr, val);
+            m_st.vramAddr += m_st.addrIncr;
             break;
         case SCROLL:
             if (m_currScrollReg ^= 1)
             {
-                m_scrollH = val;
-                Log::v("hscroll = %d", m_scrollH);
+                m_st.scrollH = val;
+                Log::v("hscroll = %d", m_st.scrollH);
             }
             else
             {
-                m_scrollV = val;
-                Log::v("vscroll = %d", m_scrollV);
+                m_st.scrollV = val;
+                Log::v("vscroll = %d", m_st.scrollV);
             }
             break;
         default:
@@ -153,14 +153,14 @@ void PPU::draw() noexcept
 
 void PPU::onBeginVblank() noexcept
 {
-    m_enableWrite = true;
-    m_vblank = true;
+    m_st.enableWrite = true;
+    m_st.vblank = true;
 }
 
 void PPU::onEndVblank() noexcept
 {
-    m_enableWrite = false;
-    m_vblank = false;
+    m_st.enableWrite = false;
+    m_st.vblank = false;
 }
 
 template <typename T, int N>
@@ -197,15 +197,15 @@ void PPU::buildImage() noexcept
     m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
 
     // Index of the active page in PAGE_LAYOUT
-    const int apn = indexOf(m_activePage, PAGE_LAYOUT);
+    const int apn = indexOf(m_st.activePage, PAGE_LAYOUT);
     assert(apn >= 0);
 
-    if (m_backgroundVisible)
+    if (m_st.backgroundVisible)
     {
         // Render background image
         // Palette: 0x3F00
-        const int t = m_scrollV,
-                  l = m_scrollH,
+        const int t = m_st.scrollV,
+                  l = m_st.scrollH,
                   vo = t % 8,
                   ho = l % 8;
         constexpr int ppr = 256,
@@ -231,7 +231,7 @@ void PPU::buildImage() noexcept
 
                 // Read color information from character area
                 const auto charNum = m_bus.readVideoMem(pageAddr + indc);
-                readCharacter(charNum, sym, m_baBkgnd, false, false);
+                readCharacter(charNum, sym, m_st.baBkgnd, false, false);
 
                 // Read color information from attribute area
                 const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
@@ -251,8 +251,8 @@ void PPU::buildImage() noexcept
     // Sprite counters for each horizontal / vertical line
     int hsc[256] = { },
         vsc[240] = { };
-    m_over8sprites = m_sprite0 = false;
-    if (m_spritesVisible)
+    m_st.over8sprites = m_st.sprite0 = false;
+    if (m_st.spritesVisible)
     {
         for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
@@ -262,9 +262,9 @@ void PPU::buildImage() noexcept
                        attrs = m_bus.readSpriteMem(i + 2),
                        x = m_bus.readSpriteMem(i + 3);
             if (++hsc[x] > 8)
-                m_over8sprites = true;
+                m_st.over8sprites = true;
             if (++vsc[y] > 8)
-                m_over8sprites = true;
+                m_st.over8sprites = true;
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::BEHIND :
                              RenderingBackend::Layer::FRONT;
@@ -272,9 +272,9 @@ void PPU::buildImage() noexcept
                        flipv = test<7>(attrs);
             const c6502_byte_t clrHi = attrs & 0b11u;
 
-            if (!m_bigSprites)
+            if (!m_st.bigSprites)
             {
-                readCharacter(nChar, sym, m_baSprites, fliph, flipv);
+                readCharacter(nChar, sym, m_st.baSprites, fliph, flipv);
 
                 expandSymbol(clrHi, PAL_SPR);
 
@@ -295,7 +295,7 @@ void PPU::buildImage() noexcept
             }
 
             if (i == 0)
-                m_sprite0 = true;
+                m_st.sprite0 = true;
         }
     }
 

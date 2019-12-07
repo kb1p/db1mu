@@ -43,6 +43,7 @@
      <string>&amp;View</string>
     </property>
     <addaction name="actionShowCPU"/>
+    <addaction name="actionShowPPU"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuEmulation"/>
@@ -104,6 +105,14 @@
    </property>
    <property name="text">
     <string>&amp;CPU state</string>
+   </property>
+  </action>
+  <action name="actionShowPPU">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PPU state</string>
    </property>
   </action>
  </widget>

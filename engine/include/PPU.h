@@ -60,42 +60,53 @@ public:
         VIDMEM_DATA = 7
     };
 
+    // Externally visible state
+    struct State
+    {
+        bool enableNMI = false,
+             bigSprites = false,
+             spritesVisible = false,
+             backgroundVisible = false,
+             allSpritesVisible = false,
+             fullBacgroundVisible = false,
+             vblank = false,
+             sprite0 = false,
+             enableWrite = true,
+             over8sprites = false;
+        c6502_word_t baBkgnd = 0,
+                     baSprites = 0,
+                     addrIncr = 1,
+                     activePage = 0x2000u;
+        c6502_word_t vramAddr = 0,
+                     sprmemAddr = 0;
+        c6502_byte_t scrollV = 0,
+                     scrollH = 0;
+        bool vramReadError = false;
+    };
+
     void writeRegister(c6502_word_t n, c6502_byte_t val) noexcept;
     c6502_byte_t readRegister(c6502_word_t n) noexcept;
 
     bool isNMIEnabled() const noexcept
     {
-        return m_enableNMI;
+        return m_st.enableNMI;
     }
 
     void draw() noexcept;
     void onBeginVblank() noexcept;
     void onEndVblank() noexcept;
 
+    const State &currentState() const noexcept
+    {
+        return m_st;
+    }
+
 private:
     Bus &m_bus;
     RenderingBackend *const m_pBackend;
 
-    bool m_enableNMI = false,
-         m_bigSprites = false,
-         m_spritesVisible = false,
-         m_backgroundVisible = false,
-         m_allSpritesVisible = false,
-         m_fullBacgroundVisible = false,
-         m_vblank = false,
-         m_sprite0 = false,
-         m_enableWrite = true,
-         m_over8sprites = false;
-    c6502_word_t m_baBkgnd = 0,
-                 m_baSprites = 0,
-                 m_addrIncr = 1,
-                 m_activePage = 0x2000u;
-    c6502_word_t m_vramAddr = 0,
-                 m_sprmemAddr = 0;
-    c6502_byte_t m_scrollV = 0,
-                 m_scrollH = 0;
+    State m_st;
     int m_currScrollReg = 0;
-    bool m_vramReadError = false;
 
     void buildImage() noexcept;
 

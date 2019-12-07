@@ -107,13 +107,13 @@ private:
     void push(c6502_byte_t v) noexcept
     {
         assert(m_regs.s > 0u && "Stack overflow");
-        writeMem(0x100u | static_cast<c6502_word_t>(m_regs.s--), v);
+        writeMem(0x100u | (m_regs.s-- & 0xFFu), v);
     }
 
     c6502_byte_t pop() noexcept
     {
         assert(m_regs.s < 0xFFu && "Stack underflow");
-        return readMem(0x100u | static_cast<c6502_word_t>(++m_regs.s));
+        return readMem(0x100u | (++m_regs.s & 0xFFu));
     }
 
     // Get the byte PC points to and increase PC by 1

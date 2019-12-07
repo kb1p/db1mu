@@ -32,6 +32,7 @@
 #include <QMainWindow>
 #include "screenwidget.h"
 #include "cpustate.h"
+#include "ppustate.h"
 #include <memory>
 
 namespace Ui
@@ -65,6 +66,7 @@ private:
     Ui::b1MainWindow *m_ui = nullptr;
     ScreenWidget *m_screen = nullptr;
     CPUStateDialog *m_cpuState = nullptr;
+    PPUStateDialog *m_ppuState = nullptr;
 
     std::unique_ptr<NESEngine> m_eng;
 };
