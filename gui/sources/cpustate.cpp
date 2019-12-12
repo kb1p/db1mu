@@ -43,6 +43,9 @@ void CPUStateDialog::show(const CPU6502 *pCPU)
         flags.append('C');
 
     m_ui->txtFlags->setText(flags);
+
+    m_ui->txtNMICount->setText(QString::number(pCPU->nmiCount()));
+    m_ui->txtRTICount->setText(QString::number(pCPU->rtiCount()));
 }
 
 void CPUStateDialog::clear()
@@ -53,4 +56,6 @@ void CPUStateDialog::clear()
     m_ui->txtY->clear();
     m_ui->txtS->clear();
     m_ui->txtFlags->clear();
+    m_ui->txtNMICount->clear();
+    m_ui->txtRTICount->clear();
 }

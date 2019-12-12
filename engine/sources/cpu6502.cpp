@@ -576,6 +576,8 @@ CMD_DEF(RTI)
     const auto ral = pop(),
                rah = pop();
     m_regs.pc = combine(ral, rah);
+
+    m_rtiCount++;
 }
 
 CMD_DEF(RTS)
@@ -924,6 +926,7 @@ void CPU6502::reset()
     m_regs.pc = combine(pcl, pch);
 
     m_state = STATE_RUN;
+    m_nmiCount = m_rtiCount = 0;
 }
 
 // Handle maskable interrupt
@@ -962,6 +965,8 @@ int CPU6502::NMI()
     const auto pcl = readMem(0xFFFA),
                pch = readMem(0xFFFB);
     m_regs.pc = combine(pcl, pch);
+
+    m_nmiCount++;
 
     return 7;
 }

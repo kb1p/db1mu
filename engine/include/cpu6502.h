@@ -62,6 +62,16 @@ public:
         return m_regs;
     }
 
+    int nmiCount() const noexcept
+    {
+        return m_nmiCount;
+    }
+
+    int rtiCount() const noexcept
+    {
+        return m_rtiCount;
+    }
+
     template <Flag FLG>
     c6502_byte_t getFlag() const noexcept
     {
@@ -75,6 +85,9 @@ private:
     State m_state;
     Bus &m_bus;
     int m_penalty;
+
+    int m_nmiCount = 0,
+        m_rtiCount = 0;
 
     using OpHandler = void (CPU6502::*)(void);
     using OpData = std::tuple<OpHandler, int, bool>;
