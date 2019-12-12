@@ -220,6 +220,9 @@ void PPU::buildImage() noexcept
                       sy = y + t;
             for (int c = 0; c < 32; c++)
             {
+                if (!m_st.fullBacgroundVisible && c == 0)
+                    continue;
+
                 const int x = c * 8,
                           sx = x + l;
                 const auto pageAddr = PAGE_LAYOUT[(apn + sy / ppc * 2 + sx / ppr) % 4];
@@ -261,6 +264,10 @@ void PPU::buildImage() noexcept
                        nChar = m_bus.readSpriteMem(i + 1),
                        attrs = m_bus.readSpriteMem(i + 2),
                        x = m_bus.readSpriteMem(i + 3);
+
+            if (!m_st.allSpritesVisible && (x >> 3) == 0)
+                continue;
+
             if (++hsc[x] > 8)
                 m_st.over8sprites = true;
             if (++vsc[y] > 8)
