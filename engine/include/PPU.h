@@ -92,9 +92,13 @@ public:
         return m_st.enableNMI;
     }
 
-    void draw() noexcept;
     void onBeginVblank() noexcept;
     void onEndVblank() noexcept;
+
+    // Per-line drawing interface
+    void startFrame() noexcept;
+    void drawNextLine() noexcept;
+    void endFrame() noexcept;
 
     const State &currentState() const noexcept
     {
@@ -107,8 +111,7 @@ private:
 
     State m_st;
     int m_currScrollReg = 0;
-
-    void buildImage() noexcept;
+    int m_currLine = 0;
 
     void readCharacter(c6502_word_t ind,
                        c6502_byte_t (&sym)[64],

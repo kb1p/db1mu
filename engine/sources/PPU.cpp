@@ -146,15 +146,11 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
     }
 }
 
-void PPU::draw() noexcept
-{
-    buildImage();
-}
-
 void PPU::onBeginVblank() noexcept
 {
     m_st.enableWrite = true;
     m_st.vblank = true;
+    m_st.sprite0 = false;
 }
 
 void PPU::onEndVblank() noexcept
@@ -173,35 +169,43 @@ int indexOf(T ndl, const T (&hstk)[N]) noexcept
     return r;
 }
 
-void PPU::buildImage() noexcept
+void expandSymbol(c6502_byte_t (&sym)[64],
+                  c6502_byte_t clrHi,
+                  c6502_word_t palAddr,
+                  Bus bus)
+    noexcept
 {
-    static constexpr c6502_word_t PAGE_LAYOUT[] = {
-        0x2800u, 0x2C00u,
-        0x2000u, 0x2400u
-    };
+    // Combine color values
+    clrHi <<= 2;
+    for (auto &pt: sym)
+        if (pt > 0)
+            pt = bus.readVideoMem(palAddr + (pt | clrHi)) | 0b11000000u;
+}
 
-    const auto mode = m_bus.getMode();
+void PPU::startFrame() noexcept
+{
+    m_currLine = 0;
+    m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
+}
 
+void PPU::drawNextLine() noexcept
+{
     c6502_byte_t sym[64];
 
-    auto expandSymbol = [this, &sym](c6502_byte_t clrHi,
-                                     const c6502_word_t palAddr) mutable
+    // Render background
+    const bool skipTopAndBottom = m_bus.getMode() == OutputMode::NTSC;
+    if (m_st.backgroundVisible && m_currLine % 8 == 7 &&
+        (!skipTopAndBottom || (m_currLine >= 8 && m_currLine <= 232)))
     {
-        // Combine color values
-        clrHi <<= 2;
-        for (auto &pt: sym)
-            if (pt > 0)
-                pt = m_bus.readVideoMem(palAddr + (pt | clrHi)) | 0b11000000u;
-    };
+        static constexpr c6502_word_t PAGE_LAYOUT[] = {
+            0x2800u, 0x2C00u,
+            0x2000u, 0x2400u
+        };
 
-    m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
+        // Index of the active page in PAGE_LAYOUT
+        const int apn = indexOf(m_st.activePage, PAGE_LAYOUT);
+        assert(apn >= 0);
 
-    // Index of the active page in PAGE_LAYOUT
-    const int apn = indexOf(m_st.activePage, PAGE_LAYOUT);
-    assert(apn >= 0);
-
-    if (m_st.backgroundVisible)
-    {
         // Render background image
         // Palette: 0x3F00
         const int t = m_st.scrollV,
@@ -210,53 +214,47 @@ void PPU::buildImage() noexcept
                   ho = l % 8;
         constexpr int ppr = 256,
                       ppc = 240;
-        const bool skipTopAndBottom = mode == OutputMode::NTSC;
-        for (int r = 0; r < 30; r++)
+
+        const int y = m_currLine - 7,
+                  sy = y + t;
+        for (int c = 0; c < 32; c++)
         {
-            if (skipTopAndBottom && (r == 0 || r == 29))
+            if (!m_st.fullBacgroundVisible && c == 0)
                 continue;
 
-            const int y = r * 8,
-                      sy = y + t;
-            for (int c = 0; c < 32; c++)
-            {
-                if (!m_st.fullBacgroundVisible && c == 0)
-                    continue;
+            const int x = c * 8,
+                      sx = x + l;
+            const auto pageAddr = PAGE_LAYOUT[(apn + sy / ppc * 2 + sx / ppr) % 4];
 
-                const int x = c * 8,
-                          sx = x + l;
-                const auto pageAddr = PAGE_LAYOUT[(apn + sy / ppc * 2 + sx / ppr) % 4];
+            const auto psx = sx % ppr,                   // page x coordinate
+                       psy = sy % ppc,                   // page y coordinate
+                       indc = (psy / 8) * 32 + psx / 8,  // index in character area
+                       inda = (psy / 32) * 8 + psx / 32; // index in attributes area
 
-                const auto psx = sx % ppr,                   // page x coordinate
-                           psy = sy % ppc,                   // page y coordinate
-                           indc = (psy / 8) * 32 + psx / 8,  // index in character area
-                           inda = (psy / 32) * 8 + psx / 32; // index in attributes area
+            // Read color information from character area
+            const auto charNum = m_bus.readVideoMem(pageAddr + indc);
+            readCharacter(charNum, sym, m_st.baBkgnd, false, false);
 
-                // Read color information from character area
-                const auto charNum = m_bus.readVideoMem(pageAddr + indc);
-                readCharacter(charNum, sym, m_st.baBkgnd, false, false);
+            // Read color information from attribute area
+            const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
+            const auto offInGrp = y / 16 % 2 * 2 + x / 16 % 2;
+            const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
-                // Read color information from attribute area
-                const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
-                const auto offInGrp = y / 16 % 2 * 2 + x / 16 % 2;
-                const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
+            expandSymbol(sym, clrHi, PAL_BG, m_bus);
 
-                expandSymbol(clrHi, PAL_BG);
-
-                // Load character / attribute data
-                m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
-                                      x - ho, y - vo,
-                                      sym);
-            }
+            // Load character / attribute data
+            m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
+                                    x - ho, y - vo,
+                                    sym);
         }
     }
 
-    // Sprite counters for each horizontal / vertical line
-    int hsc[256] = { },
-        vsc[240] = { };
-    m_st.over8sprites = m_st.sprite0 = false;
+    // Render sprites
     if (m_st.spritesVisible)
     {
+        // Sprites on line counter
+        int nSprites = 0;
+        const c6502_byte_t lastSpriteLine = m_st.bigSprites ? 15u : 7u;
         for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
             const auto i = (63u - ns) * 4u;
@@ -265,13 +263,10 @@ void PPU::buildImage() noexcept
                        attrs = m_bus.readSpriteMem(i + 2),
                        x = m_bus.readSpriteMem(i + 3);
 
-            if (!m_st.allSpritesVisible && (x >> 3) == 0)
+            if (y + lastSpriteLine != m_currLine ||
+                (!m_st.allSpritesVisible && (x >> 3) == 0))
                 continue;
-
-            if (++hsc[x] > 8)
-                m_st.over8sprites = true;
-            if (++vsc[y] > 8)
-                m_st.over8sprites = true;
+            
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::BEHIND :
                              RenderingBackend::Layer::FRONT;
@@ -283,7 +278,7 @@ void PPU::buildImage() noexcept
             {
                 readCharacter(nChar, sym, m_st.baSprites, fliph, flipv);
 
-                expandSymbol(clrHi, PAL_SPR);
+                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
 
                 // Read symbol, parse attributes
                 m_pBackend->setSymbol(lyr, x, y, sym);
@@ -293,19 +288,26 @@ void PPU::buildImage() noexcept
                 const auto e = nChar % 2;
                 const auto baddr = e == 0 ? 0u : 0x1000u;
                 readCharacter(nChar - e, sym, baddr, fliph, flipv);
-                expandSymbol(clrHi, PAL_SPR);
+                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
                 m_pBackend->setSymbol(lyr, x, y, sym);
 
                 readCharacter(nChar + 1 - e, sym, baddr, fliph, flipv);
-                expandSymbol(clrHi, PAL_SPR);
+                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
                 m_pBackend->setSymbol(lyr, x, y + 8, sym);
             }
 
-            if (i == 0)
+            nSprites++;
+            if (i == 0u)
                 m_st.sprite0 = true;
         }
+        m_st.over8sprites = nSprites > 8;
     }
 
+    m_currLine++;
+}
+
+void PPU::endFrame() noexcept
+{
     m_pBackend->draw();
 }
 

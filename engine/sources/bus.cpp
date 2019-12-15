@@ -36,11 +36,13 @@ void Bus::runFrame()
     const int clocksPerLine = m_mode == OutputMode::PAL ? PAL_LC : NTSC_LC;
     int clocks = m_mode == OutputMode::PAL ? PAL_FC : NTSC_FC;
 
-    // Most of frame time PPU is busy
-    clocks -= m_pCPU->run(clocksPerLine * 240);
-
-    // Render image
-    m_pPPU->draw();
+    m_pPPU->startFrame();
+    for (int i = 0; i < 240; i++)
+    {
+        m_pPPU->drawNextLine();
+        clocks -= m_pCPU->run(clocksPerLine);
+    }
+    m_pPPU->endFrame();
 
     // Unlock PPU and send NMI signal
     m_pPPU->onBeginVblank();
