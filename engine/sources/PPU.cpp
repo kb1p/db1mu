@@ -237,7 +237,7 @@ void PPU::drawNextLine() noexcept
 
             // Read color information from attribute area
             const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
-            const auto offInGrp = y / 16 % 2 * 2 + x / 16 % 2;
+            const auto offInGrp = sy / 16 % 2 * 2 + sx / 16 % 2;
             const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
             expandSymbol(sym, clrHi, PAL_BG, m_bus);
