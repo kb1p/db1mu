@@ -48,7 +48,13 @@ void Bus::runFrame()
     m_pPPU->onBeginVblank();
 
     if (m_pPPU->isNMIEnabled())
-        clocks -= m_pCPU->NMI();
+    {
+        // Sending of NMI signal from PPU to CPU takes 7 clocks.
+        // At this time CPU is still running and VBLANK flag is
+        // already set.
+        clocks -= m_pCPU->run(7);
+        m_pCPU->NMI();
+    }
 
     // PPU is opened for writinng only during VSYNC
     clocks -= m_pCPU->run(clocks);
