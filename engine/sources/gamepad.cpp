@@ -1,23 +1,26 @@
 #include "gamepad.h"
-/*
-static c6502_byte_t psg[...];
 
-static int joy_1, joy_readbit;
+#include <algorithm>
+#include <cassert>
 
-c6502_byte_t gp_read_joy1()
+void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcept
 {
-    c6502_byte_t ret = (joy_1 >> joy_readbit) & 1;
-    joy_readbit = (joy_readbit + 1) & 7;
-    return ret;
+    const int i = static_cast<int>(b);
+    assert(i >= 0 && i < 8);
+
+    m_buttonState[pad2 ? i + 8 : i] = pressed;
 }
 
-void gp_write_joy1(c6502_byte_t v)
+c6502_byte_t Gamepad::readRegister() noexcept
 {
-    if ((psg[0x16] & 1) && !(v & 1))
-    {
-        joy_readbit = 0;
-        keyscan();
-    }
-    psg[0x16] = v;
+    constexpr int IND_LIM = static_cast<int>(sizeof(m_buttonState) / sizeof(m_buttonState[0]));
+
+    c6502_byte_t v = m_buttonState[std::min(m_ind++, IND_LIM)] ? 1u : 0u;
+
+    if (m_lightGunTrigger)
+        v |= 0b100u;
+    if (!m_lightGunDetector)
+        v |= 0b1000u;
+
+    return v;
 }
-*/

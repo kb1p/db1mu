@@ -2,7 +2,10 @@
 #include "cpu6502.h"
 #include "PPU.h"
 #include "Cartridge.h"
+#include "gamepad.h"
 #include "log.h"
+
+#include <cassert>
 
 void Bus::injectCartrige(Cartrige *cart)
 {
@@ -14,6 +17,12 @@ void Bus::injectCartrige(Cartrige *cart)
     m_spriteMem.Clear();
 
     m_pCPU->reset();
+}
+
+void Bus::setGamePad(int n, Gamepad *pad) noexcept
+{
+    assert(n >= 0 && n < 2);
+    m_pGamePads[n] = pad;
 }
 
 constexpr int divup(int a, int b) noexcept
@@ -64,10 +73,6 @@ void Bus::runFrame()
     assert(clocks <= 0);
 }
 
-void Bus::testKeys()
-{
-}
-
 // Memory request dispatching functions
 c6502_byte_t Bus::readMem(c6502_word_t addr)
 {
@@ -80,10 +85,18 @@ c6502_byte_t Bus::readMem(c6502_word_t addr)
             assert(m_pPPU != nullptr);
             return m_pPPU->readRegister(addr & 0x0Fu);
         case 2:
-            // APU
-            //assert(false && "APU is not yet implemented");
-            //break;
-            return 0;
+            switch (addr)
+            {
+                case 0x4016u:
+                    return m_pGamePads[0] ? m_pGamePads[0]->readRegister() : 0u;
+                case 0x4017u:
+                    return m_pGamePads[1] ? m_pGamePads[1]->readRegister() : 0u;
+                default:
+                    // APU
+                    //assert(false && "APU is not yet implemented");
+                    //break;
+                    return 0;
+            }
         case 3:
             return m_wram.Read(addr & 0x1FFFu);
         default:
@@ -106,18 +119,35 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
             return m_pPPU->writeRegister(addr & 0x0Fu, val);
             break;
         case 2:
-            if (addr == 0x4014u)
+            switch (addr)
             {
-                // DMA
-                const c6502_word_t off = static_cast<c6502_word_t>(val) << 8;
-                assert(off < 0x800u || off >= 0x6000u);
-                for (c6502_word_t i = 0u; i < 0x100u; i++)
-                    m_spriteMem.Write(i, readMem(off + i));
-            }
-            else
-            {
-                // To APU registers
-                //assert(false && "APU is not yet implemented");
+                case 0x4014u:
+                {
+                    // DMA
+                    const c6502_word_t off = static_cast<c6502_word_t>(val) << 8;
+                    assert(off < 0x800u || off >= 0x6000u);
+                    for (c6502_word_t i = 0u; i < 0x100u; i++)
+                        m_spriteMem.Write(i, readMem(off + i));
+
+                    break;
+                }
+                case 0x4016u:
+                {
+                    val &= 1u;
+                    if (m_strobeReg == 1u && val == 0u)
+                    {
+                        if (m_pGamePads[0])
+                            m_pGamePads[0]->strobe();
+                        if (m_pGamePads[1])
+                            m_pGamePads[1]->strobe();
+                    }
+                    m_strobeReg = val;
+
+                    break;
+                }
+                //default:
+                    // To APU registers
+                    //assert(false && "APU is not yet implemented");
             }
             break;
         case 3:

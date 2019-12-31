@@ -6,6 +6,7 @@
 class CPU6502;
 class PPU;
 class Cartrige;
+class Gamepad;
 
 enum class OutputMode
 {
@@ -40,6 +41,10 @@ class Bus
     CPU6502 *m_pCPU = nullptr;
     PPU *m_pPPU = nullptr;
     Cartrige *m_pCart = nullptr;
+    Gamepad *m_pGamePads[2] = { };
+
+    // Gamepad strobing register
+    c6502_byte_t m_strobeReg = 0u;
 
     const OutputMode m_mode;
 
@@ -87,7 +92,7 @@ public:
 
     void runFrame();
 
-    void testKeys();
+    void setGamePad(int n, Gamepad *pad) noexcept;
 
     // CPU address space memory requests dispatching functions
     c6502_byte_t readMem(c6502_word_t addr);

@@ -41,7 +41,14 @@
 #include <PPU.h>
 #include <Cartridge.h>
 #include <loader.h>
+#include <gamepad.h>
 #include <log.h>
+
+struct KeyMap
+{
+    int qtKey;
+    Button padKey;
+};
 
 struct NESEngine
 {
@@ -49,7 +56,30 @@ struct NESEngine
      CPU6502 cpu;
      PPU ppu;
      Cartrige cartridge;
+     Gamepad padLeft, padRight;
      bool ready = false;
+
+     KeyMap keyMapLeft[8] = {
+         { Qt::Key_W,   Button::UP },
+         { Qt::Key_S,   Button::DOWN },
+         { Qt::Key_A,   Button::LEFT },
+         { Qt::Key_D,   Button::RIGHT },
+         { Qt::Key_1,   Button::START },
+         { Qt::Key_2,   Button::SELECT },
+         { Qt::Key_K,   Button::A },
+         { Qt::Key_L,   Button::B }
+     };
+
+     KeyMap keyMapRight[8] = {
+         { Qt::Key_Up,       Button::UP },
+         { Qt::Key_Down,     Button::DOWN },
+         { Qt::Key_Left,     Button::LEFT },
+         { Qt::Key_Right,    Button::RIGHT },
+         { Qt::Key_9,        Button::START },
+         { Qt::Key_0,        Button::SELECT },
+         { Qt::Key_PageUp,   Button::A },
+         { Qt::Key_PageDown, Button::B }
+     };
 
      NESEngine(OutputMode mode, PPU::RenderingBackend *pBackend):
         bus { mode },
@@ -58,6 +88,8 @@ struct NESEngine
     {
         bus.setCPU(&cpu);
         bus.setPPU(&ppu);
+        bus.setGamePad(0, &padLeft);
+        bus.setGamePad(1, &padRight);
     }
 };
 
@@ -90,6 +122,8 @@ b1MainWindow::b1MainWindow()
                      m_ppuState, SLOT(setVisible(bool)));
     QObject::connect(m_ppuState, &PPUStateDialog::finished,
                      [this](int) { m_ui->actionShowPPU->setChecked(false); });
+
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 b1MainWindow::~b1MainWindow()
@@ -179,4 +213,62 @@ void b1MainWindow::updateUI()
 void b1MainWindow::fpsUpdated(float fps)
 {
     statusBar()->showMessage(tr("%1 FPS").arg(fps, 5, 'f', 0));
+}
+
+void b1MainWindow::keyPressEvent(QKeyEvent *e)
+{
+    const auto key = e->key();
+
+    // Pad 1?
+    auto i = std::find_if(std::begin(m_eng->keyMapLeft), std::end(m_eng->keyMapLeft),
+                          [key](const KeyMap &x)
+    {
+        return x.qtKey == key;
+    });
+
+    if (i != std::end(m_eng->keyMapLeft))
+        m_eng->padLeft.buttonEvent(i->padKey, true, false, false);
+    else
+    {
+        // Pad 2?
+        i = std::find_if(std::begin(m_eng->keyMapRight), std::end(m_eng->keyMapRight),
+                         [key](const KeyMap &x)
+        {
+            return x.qtKey == key;
+        });
+
+        if (i != std::end(m_eng->keyMapRight))
+            m_eng->padRight.buttonEvent(i->padKey, true, false, false);
+        else
+            QMainWindow::keyPressEvent(e);
+    }
+}
+
+void b1MainWindow::keyReleaseEvent(QKeyEvent *e)
+{
+    const auto key = e->key();
+
+    // Pad 1?
+    auto i = std::find_if(std::begin(m_eng->keyMapLeft), std::end(m_eng->keyMapLeft),
+                          [key](const KeyMap &x)
+    {
+        return x.qtKey == key;
+    });
+
+    if (i != std::end(m_eng->keyMapLeft))
+        m_eng->padLeft.buttonEvent(i->padKey, false, false, false);
+    else
+    {
+        // Pad 2?
+        i = std::find_if(std::begin(m_eng->keyMapRight), std::end(m_eng->keyMapRight),
+                         [key](const KeyMap &x)
+        {
+            return x.qtKey == key;
+        });
+
+        if (i != std::end(m_eng->keyMapRight))
+            m_eng->padRight.buttonEvent(i->padKey, false, false, false);
+        else
+            QMainWindow::keyReleaseEvent(e);
+    }
 }
