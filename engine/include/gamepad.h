@@ -2,6 +2,7 @@
 #define GAMEPAD_H
 
 #include "common.h"
+#include <chrono>
 
 enum class Button
 {
@@ -38,6 +39,10 @@ public:
 
 private:
     bool m_buttonState[16] = { };
+
+    // "Turbo" buttons emulation
+    std::chrono::system_clock::time_point m_pressTime[16] = { };
+
     bool m_lightGunDetector = false,
          m_lightGunTrigger = false;
 

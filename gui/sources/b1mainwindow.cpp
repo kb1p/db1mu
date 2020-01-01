@@ -48,6 +48,7 @@ struct KeyMap
 {
     int qtKey;
     Button padKey;
+    bool turbo;
 };
 
 struct NESEngine
@@ -59,26 +60,28 @@ struct NESEngine
      Gamepad padLeft, padRight;
      bool ready = false;
 
-     KeyMap keyMapLeft[8] = {
-         { Qt::Key_W,   Button::UP },
-         { Qt::Key_S,   Button::DOWN },
-         { Qt::Key_A,   Button::LEFT },
-         { Qt::Key_D,   Button::RIGHT },
-         { Qt::Key_1,   Button::START },
-         { Qt::Key_2,   Button::SELECT },
-         { Qt::Key_K,   Button::A },
-         { Qt::Key_L,   Button::B }
+     KeyMap keyMapLeft[10] = {
+         { Qt::Key_W,   Button::UP,     false },
+         { Qt::Key_S,   Button::DOWN,   false },
+         { Qt::Key_A,   Button::LEFT,   false },
+         { Qt::Key_D,   Button::RIGHT,  false },
+         { Qt::Key_1,   Button::START,  false },
+         { Qt::Key_2,   Button::SELECT, false },
+         { Qt::Key_K,   Button::A,      false },
+         { Qt::Key_L,   Button::B,      false },
+         { Qt::Key_I,   Button::A,      true },
+         { Qt::Key_O,   Button::B,      true }
      };
 
      KeyMap keyMapRight[8] = {
-         { Qt::Key_Up,       Button::UP },
-         { Qt::Key_Down,     Button::DOWN },
-         { Qt::Key_Left,     Button::LEFT },
-         { Qt::Key_Right,    Button::RIGHT },
-         { Qt::Key_9,        Button::START },
-         { Qt::Key_0,        Button::SELECT },
-         { Qt::Key_PageUp,   Button::A },
-         { Qt::Key_PageDown, Button::B }
+         { Qt::Key_Up,       Button::UP,     false },
+         { Qt::Key_Down,     Button::DOWN,   false },
+         { Qt::Key_Left,     Button::LEFT,   false },
+         { Qt::Key_Right,    Button::RIGHT,  false },
+         { Qt::Key_9,        Button::START,  false },
+         { Qt::Key_0,        Button::SELECT, false },
+         { Qt::Key_PageUp,   Button::A,      false },
+         { Qt::Key_PageDown, Button::B,      false }
      };
 
      NESEngine(OutputMode mode, PPU::RenderingBackend *pBackend):
@@ -227,7 +230,7 @@ void b1MainWindow::keyPressEvent(QKeyEvent *e)
     });
 
     if (i != std::end(m_eng->keyMapLeft))
-        m_eng->padLeft.buttonEvent(i->padKey, true, false, false);
+        m_eng->padLeft.buttonEvent(i->padKey, true, i->turbo, false);
     else
     {
         // Pad 2?
@@ -238,7 +241,7 @@ void b1MainWindow::keyPressEvent(QKeyEvent *e)
         });
 
         if (i != std::end(m_eng->keyMapRight))
-            m_eng->padRight.buttonEvent(i->padKey, true, false, false);
+            m_eng->padRight.buttonEvent(i->padKey, true, i->turbo, false);
         else
             QMainWindow::keyPressEvent(e);
     }
