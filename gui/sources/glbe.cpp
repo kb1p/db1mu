@@ -9,14 +9,15 @@ static const auto *VS_SRC =
 static const auto *FS_SRC =
 #include "../shaders/glbe_frag.glsl"
 
-std::array<GLfloat, 3> color64(c6502_byte_t c) noexcept
+std::array<GLfloat, 3> fromRGB555(unsigned c) noexcept
 {
-    constexpr GLfloat stp = 1.0f / 3.0f;
+    constexpr GLfloat stp = 1.0f / 31.0f;
     std::array<GLfloat, 3> r;
 
-    r[2] = stp * static_cast<float>(c & 0b11u);
-    r[1] = stp * static_cast<float>((c >> 2) & 0b11u);
-    r[0] = stp * static_cast<float>((c >> 4) & 0b11u);
+    constexpr unsigned b5m = 0b11111u;
+    r[2] = stp * static_cast<float>(c & b5m);
+    r[1] = stp * static_cast<float>((c >> 5) & b5m);
+    r[0] = stp * static_cast<float>((c >> 10) & b5m);
 
     return r;
 }
@@ -120,7 +121,7 @@ void GLRenderingBackend::release()
 void GLRenderingBackend::setBackground(c6502_byte_t color)
 {
     assert(m_gl != nullptr);
-    const auto c = color64(m_palette[color & 0x3Fu]);
+    const auto c = fromRGB555(m_palette[color & 0x3Fu]);
     m_gl->glClearColor(c[0], c[1], c[2], 1);
     m_gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
@@ -152,7 +153,7 @@ void GLRenderingBackend::setSymbol(Layer l, int x, int y, c6502_byte_t colorData
     for (int i = 0; i < 64; i++)
     {
         const auto &c = colorData[i];
-        pChar->pixels[i] = c > 0 ? (0xC0u | m_palette[c & 0x3Fu]) : 0;
+        pChar->pixels[i] = c > 0 ? (0x8000u | m_palette[c & 0x3Fu]) : 0;
     }
 }
 
