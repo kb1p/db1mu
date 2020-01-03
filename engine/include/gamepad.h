@@ -2,16 +2,22 @@
 #define GAMEPAD_H
 
 #include "common.h"
-#include <chrono>
 
 enum class Button
 {
     A = 0, B = 1, SELECT = 2, START = 3, UP = 4, DOWN = 5, LEFT = 6, RIGHT = 7
 };
 
+class Bus;
+
 class Gamepad
 {
 public:
+    void setBus(Bus *pBus)
+    {
+        m_pBus = pBus;
+    }
+
     /*!
      * @param b Button ID
      * @param pressed true if pressed, false if released
@@ -38,15 +44,19 @@ public:
     c6502_byte_t readRegister() noexcept;
 
 private:
+    Bus *m_pBus = nullptr;
+
     bool m_buttonState[16] = { };
 
     // "Turbo" buttons emulation
-    std::chrono::system_clock::time_point m_pressTime[16] = { };
+    int m_pressTime[16] = { };
 
     bool m_lightGunDetector = false,
          m_lightGunTrigger = false;
 
     int m_ind = 0;
+
+    bool turboTest(int btnInd) const noexcept;
 };
 
 #endif

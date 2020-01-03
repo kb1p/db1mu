@@ -17,33 +17,33 @@ void Bus::injectCartrige(Cartrige *cart)
     m_spriteMem.Clear();
 
     m_pCPU->reset();
+
+    m_nFrame = 0;
 }
 
 void Bus::setGamePad(int n, Gamepad *pad) noexcept
 {
     assert(n >= 0 && n < 2);
     m_pGamePads[n] = pad;
+    pad->setBus(this);
 }
 
-constexpr int divup(int a, int b) noexcept
-{
-    return a / b + (a % b != 0 ? 1 : 0);
-}
+// TODO: these values need to be tuned
+static constexpr int PAL_FREQ = 1773447,
+                     NTSC_FREQ = 1789772,
+                     PAL_FPS = 50,
+                     NTSC_FPS = 60,
+                     PAL_FC = divrnd(PAL_FREQ, PAL_FPS),
+                     NTSC_FC = divrnd(NTSC_FREQ, NTSC_FPS),
+                     PAL_LC = divrnd(PAL_FC, 264),
+                     NTSC_LC = divrnd(NTSC_FC, 264);
 
 void Bus::runFrame()
 {
-    // TODO: these values need to be tuned
-    constexpr int PAL_FREQ = 1773447,
-                  NTSC_FREQ = 1789772,
-                  PAL_FPS = 50,
-                  NTSC_FPS = 60,
-                  PAL_FC = divup(PAL_FREQ, PAL_FPS),
-                  NTSC_FC = divup(NTSC_FREQ, NTSC_FPS),
-                  PAL_LC = divup(PAL_FC, 264),
-                  NTSC_LC = divup(NTSC_FC, 264);
-
     const int clocksPerLine = m_mode == OutputMode::PAL ? PAL_LC : NTSC_LC;
     int clocks = m_mode == OutputMode::PAL ? PAL_FC : NTSC_FC;
+
+    m_nFrame++;
 
     m_pPPU->startFrame();
     for (int i = 0; i < 240; i++)
@@ -71,6 +71,11 @@ void Bus::runFrame()
     m_pPPU->onEndVblank();
 
     assert(clocks <= 0);
+}
+
+int Bus::currentTimeMs() const noexcept
+{
+    return m_nFrame * 1000 / (m_mode == OutputMode::PAL ? PAL_FPS : NTSC_FPS);
 }
 
 // Memory request dispatching functions

@@ -25,6 +25,11 @@ inline constexpr c6502_word_t combine(c6502_byte_t lo, c6502_byte_t hi) noexcept
     return (static_cast<c6502_word_t>(hi & 0xFFu) << 8) | (lo & 0xFFu);
 }
 
+inline constexpr int divrnd(int a, int b) noexcept
+{
+    return (a + b / 2) / b;
+}
+
 class Exception
 {
 public:

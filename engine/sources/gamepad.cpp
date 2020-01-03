@@ -1,14 +1,11 @@
 #include "gamepad.h"
+#include "bus.h"
 
 #include <algorithm>
 #include <cassert>
 
-using namespace std::chrono;
-
-static const system_clock::time_point ZERO_TIME;
-
-// ~6 on/off switches per second
-static const milliseconds TURBO_INTERVAL { 83 };
+// 6 on/off switches per second
+static constexpr int TURBO_FREQ = 12;
 
 void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcept
 {
@@ -20,14 +17,21 @@ void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcep
     m_buttonState[i] = pressed;
 
     if (turbo)
-        m_pressTime[i] = system_clock::now();
+    {
+        assert(m_pBus != nullptr);
+        m_pressTime[i] = m_pBus->currentTimeMs();
+    }
     else
-        m_pressTime[i] = ZERO_TIME;
+        m_pressTime[i] = -1;
 }
 
-inline bool turboOn(const system_clock::time_point &p) noexcept
+bool Gamepad::turboTest(int btnInd) const noexcept
 {
-    return duration_cast<milliseconds>(system_clock::now() - p) / TURBO_INTERVAL % 2 == 0;
+    if (m_pressTime[btnInd] < 0)
+        return true;
+
+    assert(m_pBus != nullptr);
+    return divrnd((m_pBus->currentTimeMs() - m_pressTime[btnInd]) * TURBO_FREQ, 1000) % 2 == 0;
 }
 
 c6502_byte_t Gamepad::readRegister() noexcept
@@ -36,8 +40,7 @@ c6502_byte_t Gamepad::readRegister() noexcept
 
     const int ind = std::min(m_ind++, IND_LIM);
     c6502_byte_t v = 0u;
-    if (m_buttonState[ind] &&
-        (m_pressTime[ind] == ZERO_TIME || turboOn(m_pressTime[ind])))
+    if (m_buttonState[ind] && turboTest(ind))
         v = 1u;
 
     if (m_lightGunTrigger)

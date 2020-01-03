@@ -48,6 +48,8 @@ class Bus
 
     const OutputMode m_mode;
 
+    int m_nFrame = 0;
+
 public:
     explicit Bus(OutputMode m):
         m_mode { m }
@@ -91,6 +93,13 @@ public:
     }
 
     void runFrame();
+
+    int currentFrame() const noexcept
+    {
+        return m_nFrame;
+    }
+
+    int currentTimeMs() const noexcept;
 
     void setGamePad(int n, Gamepad *pad) noexcept;
 
