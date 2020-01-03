@@ -2,7 +2,6 @@
 #include "bus.h"
 
 #include <algorithm>
-#include <cassert>
 
 // 6 on/off switches per second
 static constexpr int TURBO_FREQ = 12;
@@ -17,10 +16,7 @@ void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcep
     m_buttonState[i] = pressed;
 
     if (turbo)
-    {
-        assert(m_pBus != nullptr);
-        m_pressTime[i] = m_pBus->currentTimeMs();
-    }
+        m_pressTime[i] = bus().currentTimeMs();
     else
         m_pressTime[i] = -1;
 }
@@ -30,8 +26,7 @@ bool Gamepad::turboTest(int btnInd) const noexcept
     if (m_pressTime[btnInd] < 0)
         return true;
 
-    assert(m_pBus != nullptr);
-    return divrnd((m_pBus->currentTimeMs() - m_pressTime[btnInd]) * TURBO_FREQ, 1000) % 2 == 0;
+    return divrnd((bus().currentTimeMs() - m_pressTime[btnInd]) * TURBO_FREQ, 1000) % 2 == 0;
 }
 
 c6502_byte_t Gamepad::readRegister() noexcept

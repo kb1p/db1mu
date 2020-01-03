@@ -8,20 +8,13 @@ enum class Button
     A = 0, B = 1, SELECT = 2, START = 3, UP = 4, DOWN = 5, LEFT = 6, RIGHT = 7
 };
 
-class Bus;
-
-class Gamepad
+class Gamepad: public Component
 {
 public:
     Gamepad() = default;
 
     Gamepad(const Gamepad&) = delete;
     Gamepad &operator=(const Gamepad&) = delete;
-
-    void setBus(Bus *pBus)
-    {
-        m_pBus = pBus;
-    }
 
     /*!
      * @param b Button ID
@@ -49,8 +42,6 @@ public:
     c6502_byte_t readRegister() noexcept;
 
 private:
-    Bus *m_pBus = nullptr;
-
     bool m_buttonState[16] = { };
 
     // "Turbo" buttons emulation

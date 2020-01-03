@@ -14,7 +14,7 @@
 #define TRACE(...)
 #endif
 
-class CPU6502
+class CPU6502: public Component
 {
     friend class Debugger;
 
@@ -44,7 +44,7 @@ public:
         C = 0, Z = 1, I = 2, D = 3, B = 4, V = 6, N = 7
     };
 
-    CPU6502(Bus &bus);
+    CPU6502();
 
     CPU6502(const CPU6502&) = delete;
     CPU6502 &operator=(const CPU6502&) = delete;
@@ -86,7 +86,7 @@ private:
     Reg m_regs;
 
     State m_state;
-    Bus &m_bus;
+
     int m_penalty;
 
     int m_nmiCount = 0,
@@ -108,12 +108,12 @@ private:
 
     c6502_byte_t readMem(c6502_word_t addr) noexcept
     {
-        return m_bus.readMem(addr);
+        return bus().readMem(addr);
     }
 
     void writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
     {
-        m_bus.writeMem(addr, val);
+        bus().writeMem(addr, val);
     }
 
     int step();

@@ -21,6 +21,20 @@ void Bus::injectCartrige(Cartrige *cart)
     m_nFrame = 0;
 }
 
+void Bus::setCPU(CPU6502 *pCPU) noexcept
+{
+    assert(pCPU != nullptr);
+    m_pCPU = pCPU;
+    pCPU->setBus(this);
+}
+
+void Bus::setPPU(PPU *pPPU) noexcept
+{
+    assert(pPPU != nullptr);
+    m_pPPU = pPPU;
+    pPPU->setBus(this);
+}
+
 void Bus::setGamePad(int n, Gamepad *pad) noexcept
 {
     assert(n >= 0 && n < 2);

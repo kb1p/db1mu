@@ -5,6 +5,7 @@
 #define COMMON_H
 
 #include <stdint.h>
+#include <cassert>
 
 typedef uint8_t c6502_byte_t;
 typedef uint16_t c6502_word_t;
@@ -59,6 +60,27 @@ public:
 private:
     Code m_code;
     char *m_msg = nullptr;
+};
+
+class Bus;
+
+class Component
+{
+    Bus *m_pBus = nullptr;
+
+protected:
+    friend class Bus;
+
+    void setBus(Bus *pBus) noexcept
+    {
+        m_pBus = pBus;
+    }
+
+    Bus &bus() const noexcept
+    {
+        assert(m_pBus != nullptr && "component is not attached to the Bus");
+        return *m_pBus;
+    }
 };
 
 #endif

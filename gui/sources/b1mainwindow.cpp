@@ -86,8 +86,7 @@ struct NESEngine
 
      NESEngine(OutputMode mode, PPU::RenderingBackend *pBackend):
         bus { mode },
-        cpu { bus },
-        ppu { bus, pBackend }
+        ppu { pBackend }
     {
         bus.setCPU(&cpu);
         bus.setPPU(&ppu);

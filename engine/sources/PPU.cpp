@@ -1,4 +1,5 @@
 #include "PPU.h"
+#include "bus.h"
 #include "log.h"
 
 template <c6502_byte_t POS>
@@ -35,10 +36,10 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
             }
             break;
         case SPRMEM_DATA:
-            rv = m_bus.readSpriteMem(m_st.sprmemAddr++);
+            rv = bus().readSpriteMem(m_st.sprmemAddr++);
             break;
         case VIDMEM_DATA:
-            rv = m_bus.readVideoMem(m_st.vramAddr);
+            rv = bus().readVideoMem(m_st.vramAddr);
             if (!m_st.vramReadError)
                 m_st.vramAddr += m_st.addrIncr;
             else
@@ -114,7 +115,7 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             break;
         case SPRMEM_DATA:
             Log::v("write to sprite address = %X", m_st.sprmemAddr);
-            m_bus.writeSpriteMem(m_st.sprmemAddr++, val);
+            bus().writeSpriteMem(m_st.sprmemAddr++, val);
             break;
         case VIDMEM_ADDR:
             m_st.vramAddr <<= 8;
@@ -126,7 +127,7 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             break;
         case VIDMEM_DATA:
             Log::v("write to vram address = %X", m_st.vramAddr);
-            m_bus.writeVideoMem(m_st.vramAddr, val);
+            bus().writeVideoMem(m_st.vramAddr, val);
             m_st.vramAddr += m_st.addrIncr;
             break;
         case SCROLL:
@@ -185,7 +186,7 @@ void expandSymbol(c6502_byte_t (&sym)[64],
 void PPU::startFrame() noexcept
 {
     m_currLine = 0;
-    m_pBackend->setBackground(m_bus.readVideoMem(0x3F00u));
+    m_pBackend->setBackground(bus().readVideoMem(0x3F00u));
 }
 
 void PPU::drawNextLine() noexcept
@@ -193,7 +194,7 @@ void PPU::drawNextLine() noexcept
     c6502_byte_t sym[64];
 
     // Render background
-    const bool skipTopAndBottom = m_bus.getMode() == OutputMode::NTSC;
+    const bool skipTopAndBottom = bus().getMode() == OutputMode::NTSC;
     if (m_st.backgroundVisible && m_currLine % 8 == 7 &&
         (!skipTopAndBottom || (m_currLine >= 8 && m_currLine <= 232)))
     {
@@ -232,15 +233,15 @@ void PPU::drawNextLine() noexcept
                        inda = (psy / 32) * 8 + psx / 32; // index in attributes area
 
             // Read color information from character area
-            const auto charNum = m_bus.readVideoMem(pageAddr + indc);
+            const auto charNum = bus().readVideoMem(pageAddr + indc);
             readCharacter(charNum, sym, m_st.baBkgnd, false, false);
 
             // Read color information from attribute area
-            const auto clrGrp = m_bus.readVideoMem(pageAddr + 960 + inda);
+            const auto clrGrp = bus().readVideoMem(pageAddr + 960 + inda);
             const auto offInGrp = sy / 16 % 2 * 2 + sx / 16 % 2;
             const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
-            expandSymbol(sym, clrHi, PAL_BG, m_bus);
+            expandSymbol(sym, clrHi, PAL_BG, bus());
 
             // Load character / attribute data
             m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
@@ -258,10 +259,10 @@ void PPU::drawNextLine() noexcept
         for (c6502_word_t ns = 0; ns < 64u; ns++)
         {
             const auto i = (63u - ns) * 4u;
-            const auto y = m_bus.readSpriteMem(i),
-                       nChar = m_bus.readSpriteMem(i + 1),
-                       attrs = m_bus.readSpriteMem(i + 2),
-                       x = m_bus.readSpriteMem(i + 3);
+            const auto y = bus().readSpriteMem(i),
+                       nChar = bus().readSpriteMem(i + 1),
+                       attrs = bus().readSpriteMem(i + 2),
+                       x = bus().readSpriteMem(i + 3);
 
             if (y + lastSpriteLine != m_currLine ||
                 (!m_st.allSpritesVisible && (x >> 3) == 0))
@@ -278,7 +279,7 @@ void PPU::drawNextLine() noexcept
             {
                 readCharacter(nChar, sym, m_st.baSprites, fliph, flipv);
 
-                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
+                expandSymbol(sym, clrHi, PAL_SPR, bus());
 
                 // Read symbol, parse attributes
                 m_pBackend->setSymbol(lyr, x, y, sym);
@@ -288,11 +289,11 @@ void PPU::drawNextLine() noexcept
                 const auto e = nChar % 2;
                 const auto baddr = e == 0 ? 0u : 0x1000u;
                 readCharacter(nChar - e, sym, baddr, fliph, flipv);
-                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
+                expandSymbol(sym, clrHi, PAL_SPR, bus());
                 m_pBackend->setSymbol(lyr, x, y, sym);
 
                 readCharacter(nChar + 1 - e, sym, baddr, fliph, flipv);
-                expandSymbol(sym, clrHi, PAL_SPR, m_bus);
+                expandSymbol(sym, clrHi, PAL_SPR, bus());
                 m_pBackend->setSymbol(lyr, x, y + 8, sym);
             }
 
@@ -320,8 +321,8 @@ void PPU::readCharacter(c6502_word_t ind,
     const auto ba = baseAddr + ind * 16;
     for (c6502_word_t i = 0; i < 8; i++)
     {
-        const auto r0 = m_bus.readVideoMem(ba + i),
-                   r1 = m_bus.readVideoMem(ba + i + 8);
+        const auto r0 = bus().readVideoMem(ba + i),
+                   r1 = bus().readVideoMem(ba + i + 8);
         const auto off = (flipv ? 7 - i : i) * 8;
         for (c6502_word_t j = 0; j < 8; j++)
         {

@@ -39,10 +39,10 @@ int main(int argc, char **argv)
     logCfg.autoFlush = true;
 
     Bus systemBus { OutputMode::NTSC };
-    CPU6502 cpu { systemBus };
+    CPU6502 cpu;
     systemBus.setCPU(&cpu);
     DummyBackend db;
-    PPU ppu { systemBus, &db };
+    PPU ppu { &db };
     systemBus.setPPU(&ppu);
     Cartrige cartrige;
     ROMLoader loader(cartrige);

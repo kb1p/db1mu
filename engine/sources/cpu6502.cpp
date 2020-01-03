@@ -902,9 +902,8 @@ void CPU6502::initOpHandlers() noexcept
 }
 
 /*** CPU class implementation ***/
-CPU6502::CPU6502(Bus &bus)
-    : m_state(STATE_HALTED)
-    , m_bus { bus }
+CPU6502::CPU6502()
+    : m_state { STATE_HALTED }
 {
     // Static initializer
     static bool staticInitComplete = false;

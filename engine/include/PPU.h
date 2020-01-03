@@ -2,9 +2,8 @@
 #define	PPU_H
 
 #include "storage.h"
-#include "bus.h"
 
-class PPU
+class PPU: public Component
 {
 public:
     /// Interface that must be implemented using a concrete rendering system (e.g. Open GL ES)
@@ -40,8 +39,7 @@ public:
         }
     };
 
-    explicit PPU(Bus &bus, RenderingBackend *rbe):
-        m_bus { bus },
+    explicit PPU(RenderingBackend *rbe):
         m_pBackend { rbe }
     {
         assert(m_pBackend != nullptr);
@@ -110,7 +108,6 @@ public:
     }
 
 private:
-    Bus &m_bus;
     RenderingBackend *const m_pBackend;
 
     State m_st;

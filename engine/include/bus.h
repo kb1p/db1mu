@@ -59,11 +59,7 @@ public:
     Bus(const Bus&) = delete;
     Bus &operator=(const Bus&) = delete;
 
-    void setCPU(CPU6502 *pCPU) noexcept
-    {
-        assert(pCPU != nullptr);
-        m_pCPU = pCPU;
-    }
+    void setCPU(CPU6502 *pCPU) noexcept;
 
     CPU6502 *getCPU() const noexcept
     {
@@ -71,11 +67,7 @@ public:
         return m_pCPU;
     }
 
-    void setPPU(PPU *pPPU) noexcept
-    {
-        assert(pPPU != nullptr);
-        m_pPPU = pPPU;
-    }
+    void setPPU(PPU *pPPU) noexcept;
 
     PPU *getPPU() const noexcept
     {
