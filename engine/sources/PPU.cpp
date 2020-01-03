@@ -172,7 +172,7 @@ int indexOf(T ndl, const T (&hstk)[N]) noexcept
 void expandSymbol(c6502_byte_t (&sym)[64],
                   c6502_byte_t clrHi,
                   c6502_word_t palAddr,
-                  Bus bus)
+                  Bus &bus)
     noexcept
 {
     // Combine color values

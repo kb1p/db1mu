@@ -47,6 +47,10 @@ public:
         assert(m_pBackend != nullptr);
         m_pBackend->setPPUInstance(this);
     }
+
+    // Prohibit copying
+    PPU(const PPU&) = delete;
+    PPU &operator=(const PPU&) = delete;
     
     enum Registers: c6502_word_t
     {

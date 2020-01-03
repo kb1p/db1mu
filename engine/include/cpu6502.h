@@ -46,6 +46,9 @@ public:
 
     CPU6502(Bus &bus);
 
+    CPU6502(const CPU6502&) = delete;
+    CPU6502 &operator=(const CPU6502&) = delete;
+
     int run(int clk) noexcept;
 
     void reset();

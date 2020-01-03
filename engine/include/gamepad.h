@@ -13,6 +13,11 @@ class Bus;
 class Gamepad
 {
 public:
+    Gamepad() = default;
+
+    Gamepad(const Gamepad&) = delete;
+    Gamepad &operator=(const Gamepad&) = delete;
+
     void setBus(Bus *pBus)
     {
         m_pBus = pBus;

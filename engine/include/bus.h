@@ -56,6 +56,9 @@ public:
     {
     }
 
+    Bus(const Bus&) = delete;
+    Bus &operator=(const Bus&) = delete;
+
     void setCPU(CPU6502 *pCPU) noexcept
     {
         assert(pCPU != nullptr);
