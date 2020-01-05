@@ -3,8 +3,8 @@
 
 #include <algorithm>
 
-// 6 on/off switches per second
-static constexpr int TURBO_FREQ = 12;
+// Repeat press / release sequence at 10 Hz frequency
+static constexpr int TURBO_FREQ = 20;
 
 void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcept
 {
@@ -14,19 +14,15 @@ void Gamepad::buttonEvent(Button b, bool pressed, bool turbo, bool pad2) noexcep
         i += 8;
 
     m_buttonState[i] = pressed;
-
-    if (turbo)
-        m_pressTime[i] = bus().currentTimeMs();
-    else
-        m_pressTime[i] = -1;
+    m_turboOn[i] = turbo;
 }
 
 bool Gamepad::turboTest(int btnInd) const noexcept
 {
-    if (m_pressTime[btnInd] < 0)
+    if (!m_turboOn[btnInd])
         return true;
 
-    return divrnd((bus().currentTimeMs() - m_pressTime[btnInd]) * TURBO_FREQ, 1000) % 2 == 0;
+    return divrnd(bus().currentTimeMs() * TURBO_FREQ, 1000) % 2 == 0;
 }
 
 c6502_byte_t Gamepad::readRegister() noexcept

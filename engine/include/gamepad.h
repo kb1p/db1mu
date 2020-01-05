@@ -45,7 +45,7 @@ private:
     bool m_buttonState[16] = { };
 
     // "Turbo" buttons emulation
-    int m_pressTime[16] = { };
+    bool m_turboOn[16] = { };
 
     bool m_lightGunDetector = false,
          m_lightGunTrigger = false;
