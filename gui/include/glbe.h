@@ -7,11 +7,19 @@
 
 class GLRenderingBackend: public PPU::RenderingBackend
 {
+    static constexpr GLsizei FBO_WIDTH = 256,
+                             FBO_HEIGHT = 240;
+
     QOpenGLFunctions *m_gl = nullptr;
-    GLuint m_shdr = 0,
-           m_vbo = 0;
+    GLuint m_shdr1st = 0,
+           m_shdr2nd = 0,
+           m_vbo = 0,
+           m_fbo = 0,
+           m_tex = 0;
     GLint m_uPos = 0,
-          m_uSpriteData = 0;
+          m_uSpriteData = 0,
+          m_uTexture = 0;
+    GLint m_viewPort[4] = { };
 
     // NES to RGB
     GLint m_palette[64] = {

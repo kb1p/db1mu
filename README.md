@@ -7,7 +7,7 @@ _The project is still under development._
 
 ## What's already done
 * CPU, PPU, gamepad modules.
-* Initial version of reference frontend using Qt5. _Tested on Ubuntu 18.04 platform._
+* Initial version of reference frontend using Qt5. _Tested on Ubuntu 18.04 and Raspbian 10._
 * Default mapper which supports 1-2 16kb ROM banks and 1 8kb VROM bank.
 
 ## To do
