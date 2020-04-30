@@ -170,17 +170,24 @@ int indexOf(T ndl, const T (&hstk)[N]) noexcept
     return r;
 }
 
-void expandSymbol(c6502_byte_t (&sym)[64],
+bool expandSymbol(c6502_byte_t (&sym)[64],
                   c6502_byte_t clrHi,
                   c6502_word_t palAddr,
                   Bus &bus)
     noexcept
 {
+    bool empty = true;
+
     // Combine color values
     clrHi <<= 2;
     for (auto &pt: sym)
         if (pt > 0)
+        {
             pt = bus.readVideoMem(palAddr + (pt | clrHi)) | 0b11000000u;
+            empty = false;
+        }
+
+    return !empty;
 }
 
 void PPU::startFrame() noexcept
@@ -241,12 +248,11 @@ void PPU::drawNextLine() noexcept
             const auto offInGrp = sy / 16 % 2 * 2 + sx / 16 % 2;
             const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1)) & 0b11u;
 
-            expandSymbol(sym, clrHi, PAL_BG, bus());
-
             // Load character / attribute data
-            m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
-                                    x - ho, y - vo,
-                                    sym);
+            if (expandSymbol(sym, clrHi, PAL_BG, bus()))
+                m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
+                                      x - ho, y - vo,
+                                      sym);
         }
     }
 
@@ -279,22 +285,21 @@ void PPU::drawNextLine() noexcept
             {
                 readCharacter(nChar, sym, m_st.baSprites, fliph, flipv);
 
-                expandSymbol(sym, clrHi, PAL_SPR, bus());
-
                 // Read symbol, parse attributes
-                m_pBackend->setSymbol(lyr, x, y, sym);
+                if (expandSymbol(sym, clrHi, PAL_SPR, bus()))
+                    m_pBackend->setSymbol(lyr, x, y, sym);
             }
             else
             {
                 const auto e = nChar % 2;
                 const auto baddr = e == 0 ? 0u : 0x1000u;
                 readCharacter(nChar - e, sym, baddr, fliph, flipv);
-                expandSymbol(sym, clrHi, PAL_SPR, bus());
-                m_pBackend->setSymbol(lyr, x, y, sym);
+                if (expandSymbol(sym, clrHi, PAL_SPR, bus()))
+                    m_pBackend->setSymbol(lyr, x, y, sym);
 
                 readCharacter(nChar + 1 - e, sym, baddr, fliph, flipv);
-                expandSymbol(sym, clrHi, PAL_SPR, bus());
-                m_pBackend->setSymbol(lyr, x, y + 8, sym);
+                if (expandSymbol(sym, clrHi, PAL_SPR, bus()))
+                    m_pBackend->setSymbol(lyr, x, y + 8, sym);
             }
 
             nSprites++;
