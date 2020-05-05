@@ -36,7 +36,7 @@ template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP_X>() noexcept
 {
     const c6502_word_t addr = static_cast<c6502_word_t>(readMem(m_regs.pc++)) + m_regs.x;
-    const auto ea = addr > 0xFFu ? 0 : addr;
+    const auto ea = addr & 0xFFu;
     TRACE("Mode = ZP,X; addr = %X", ea);
     return ea;
 }
@@ -45,7 +45,7 @@ template <>
 c6502_word_t CPU6502::fetchAddr<CPU6502::AM::ZP_Y>() noexcept
 {
     const c6502_word_t addr = static_cast<c6502_word_t>(readMem(m_regs.pc++)) + m_regs.y;
-    const auto ea = addr > 0xFFu ? 0 : addr;
+    const auto ea = addr & 0xFFu;
     TRACE("Mode = ZP,Y; addr = %X", ea);
     return ea;
 }
@@ -253,10 +253,11 @@ CMD_DEF(BPL)
 
 CMD_DEF(BRK)
 {
+    m_regs.pc++;
     push(hi_byte(m_regs.pc));
     push(lo_byte(m_regs.pc));
     setFlag<Flag::B>(1);
-    push(m_regs.p);
+    push(m_regs.p | 0b00110000u);
     setFlag<Flag::I>(1);
 
     const auto l = readMem(0xFFFE),
@@ -495,7 +496,7 @@ CMD_DEF(PHA)
 CMD_DEF(PHP)
 {
     TRACE("PHP");
-    push(m_regs.p);
+    push(m_regs.p | 0b00110000u);
 }
 
 CMD_DEF(PLA)
