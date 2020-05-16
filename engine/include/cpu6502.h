@@ -49,6 +49,9 @@ public:
     CPU6502(const CPU6502&) = delete;
     CPU6502 &operator=(const CPU6502&) = delete;
 
+    /// Run processor until the given number of clocks.
+    /// @param clk Maximum number of clocks the processor can use.
+    /// @return Actual number of clocks spent. Always <= @a clk.
     int run(int clk) noexcept;
 
     void reset();
@@ -116,7 +119,12 @@ private:
         bus().writeMem(addr, val);
     }
 
-    int step();
+    /// Run single processor instruction if it fits within provided clock limit.
+    /// @param clk Maximum number of clocks the processor can use.
+    /// @return Actual number of clocks spent. Zero while state is still STATE_RUN
+    /// means either the instruction cannot fit within provided clock limit, otherwise
+    /// an error occured.
+    int step(const int clk);
 
     // Helpers
     // Push to / pop from the stack shorthands
@@ -130,12 +138,6 @@ private:
     {
         assert(m_regs.s < 0xFFu && "Stack underflow");
         return readMem(0x100u | (++m_regs.s & 0xFFu));
-    }
-
-    // Get the byte PC points to and increase PC by 1
-    c6502_byte_t advance() noexcept
-    {
-        return readMem(m_regs.pc++);
     }
 
     /// Addressing modes

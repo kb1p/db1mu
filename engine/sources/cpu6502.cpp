@@ -974,44 +974,52 @@ int CPU6502::NMI()
 int CPU6502::run(int clk) noexcept
 {
     assert(clk > 0);
-    int realClocks = 0;
-    while (realClocks < clk)
+
+    int clkStep = 0, clkTotal = 0;
+    do
     {
         switch (m_state)
         {
             case STATE_RUN:
-                realClocks += step();
+                clkStep = step(clk);
+                clkTotal += clkStep;
+                clk -= clkStep;
                 break;
             case STATE_ERROR:
                 Log::e("Unexpected CPU state (%d)", m_state);
             case STATE_HALTED:
-                return 0;
+                clkStep = 0;
         }
     }
+    while (clkStep > 0);
 
-    return realClocks;
+    return clkTotal;
 }
 
-int CPU6502::step()
+int CPU6502::step(const int clk)
 {
-    const auto opcode = advance();
+    const auto opcode = readMem(m_regs.pc);
 
     OpHandler oph;
     int tacts;
     bool usePenalty;
     std::tie(oph, tacts, usePenalty) = s_opHandlers[opcode];
-    if (tacts > 0)
-    {
-        m_penalty = 0;
-        (this->*oph)();
-        return tacts + (usePenalty ? m_penalty : 0);
-    }
-    else
+
+    int rt = 0;
+    if (tacts <= 0)
     {
         m_state = STATE_ERROR;
 
         Log::e("Bad opcode %X", opcode);
         assert(false && "Bad opcode");
-        return 0;
     }
+    else if (tacts + (usePenalty ? 2 : 0) <= clk)
+    {
+        m_regs.pc++;
+        m_penalty = 0;
+        (this->*oph)();
+        rt = tacts + (usePenalty ? m_penalty : 0);
+    }
+
+    return rt;
 }

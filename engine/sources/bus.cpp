@@ -42,29 +42,29 @@ void Bus::setGamePad(int n, Gamepad *pad) noexcept
     pad->setBus(this);
 }
 
-// TODO: these values need to be tuned
-static constexpr int PAL_FREQ = 1773447,
-                     NTSC_FREQ = 1789772,
-                     PAL_FPS = 50,
+static constexpr int PAL_FPS = 50,
                      NTSC_FPS = 60,
-                     PAL_FC = divrnd(PAL_FREQ, PAL_FPS),
-                     NTSC_FC = divrnd(NTSC_FREQ, NTSC_FPS),
-                     PAL_LC = divrnd(PAL_FC, 264),
-                     NTSC_LC = divrnd(NTSC_FC, 264);
+                     PAL_LINE_CYCLES = 107,     // 106.56
+                     PAL_NMI_LINES = 70,
+                     NTSC_LINE_CYCLES = 113,    // 113.33
+                     NTSC_NMI_LINES = 20;
 
 void Bus::runFrame()
 {
-    const int clocksPerLine = m_mode == OutputMode::PAL ? PAL_LC : NTSC_LC;
-    int clocks = m_mode == OutputMode::PAL ? PAL_FC : NTSC_FC;
+    const int CPL = m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES,
+              NMI_LINES = m_mode == OutputMode::PAL ? PAL_NMI_LINES : NTSC_NMI_LINES;
 
     m_nFrame++;
 
     m_pPPU->startFrame();
+
+    // Visible scanlines
     for (int i = 0; i < 240; i++)
     {
         m_pPPU->drawNextLine();
-        clocks -= m_pCPU->run(clocksPerLine);
+        m_pCPU->run(CPL);
     }
+
     m_pPPU->endFrame();
 
     // Unlock PPU and send NMI signal
@@ -75,16 +75,15 @@ void Bus::runFrame()
         // Sending of NMI signal from PPU to CPU takes 7 clocks.
         // At this time CPU is still running and VBLANK flag is
         // already set.
-        clocks -= m_pCPU->run(7);
+        m_pCPU->run(7);
         m_pCPU->NMI();
     }
 
     // PPU is opened for writinng only during VSYNC
-    clocks -= m_pCPU->run(clocks);
+    for (int i = 0; i < NMI_LINES; i++)
+        m_pCPU->run(CPL);
 
     m_pPPU->onEndVblank();
-
-    assert(clocks <= 0);
 }
 
 int Bus::currentTimeMs() const noexcept
