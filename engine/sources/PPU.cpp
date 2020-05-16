@@ -262,18 +262,18 @@ void PPU::drawNextLine() noexcept
         // Sprites on line counter
         int nSprites = 0;
         const c6502_byte_t lastSpriteLine = m_st.bigSprites ? 15u : 7u;
-        for (c6502_word_t ns = 0; ns < 64u; ns++)
+        for (int ns = 63; ns >= 0; ns--)
         {
-            const auto i = (63u - ns) * 4u;
-            const auto y = bus().readSpriteMem(i),
-                       nChar = bus().readSpriteMem(i + 1),
-                       attrs = bus().readSpriteMem(i + 2),
-                       x = bus().readSpriteMem(i + 3);
+            const auto sa = static_cast<c6502_word_t>(ns * 4u);
+            const auto y = static_cast<c6502_byte_t>(bus().readSpriteMem(sa) + 1u),
+                       nChar = bus().readSpriteMem(sa + 1),
+                       attrs = bus().readSpriteMem(sa + 2),
+                       x = bus().readSpriteMem(sa + 3);
 
             if (y + lastSpriteLine != m_currLine ||
                 (!m_st.allSpritesVisible && (x >> 3) == 0))
                 continue;
-            
+
             const auto lyr = test<5>(attrs) ?
                              RenderingBackend::Layer::BEHIND :
                              RenderingBackend::Layer::FRONT;
@@ -303,7 +303,7 @@ void PPU::drawNextLine() noexcept
             }
 
             nSprites++;
-            if (i == 0u)
+            if (ns == 0)
                 m_st.sprite0 = true;
         }
         m_st.over8sprites = nSprites > 8;
