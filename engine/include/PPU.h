@@ -78,12 +78,17 @@ public:
         c6502_word_t baBkgnd = 0,
                      baSprites = 0,
                      addrIncr = 1,
-                     activePage = 0x2000u;
-        c6502_word_t vramAddr = 0,
+                     activePageIndex = 0,
+                     vramAddr = 0,
                      sprmemAddr = 0;
         c6502_byte_t scrollV = 0,
-                     scrollH = 0;
-        bool vramReadError = false;
+                     scrollH = 0,
+                     vramReadBuf = 0;
+
+        c6502_word_t activePage() const noexcept
+        {
+            return 0x2000u + activePageIndex * 0x400u;
+        }
     };
 
     void writeRegister(c6502_word_t n, c6502_byte_t val) noexcept;
@@ -108,17 +113,41 @@ public:
     }
 
 private:
+    struct PageTileInfo
+    {
+        c6502_word_t pageAddr,
+                     charIndex,
+                     attrIndex;
+
+        c6502_word_t characterAddress() const noexcept
+        {
+            return pageAddr + charIndex;
+        }
+
+        c6502_word_t attributeAddress() const noexcept
+        {
+            return pageAddr + attrIndex + 960u;
+        }
+    };
+
+    static constexpr int PPR = 256,
+                         PPC = 240;
+
     RenderingBackend *const m_pBackend;
 
     State m_st;
-    int m_currScrollReg = 0;
+    int m_scrollSwitch = 0;
     int m_currLine = 0;
+    c6502_byte_t m_frameVScroll = 0;
 
-    void readCharacter(c6502_word_t ind,
-                       c6502_byte_t (&sym)[64],
-                       const c6502_word_t baseAddr,
-                       const bool fliph,
-                       const bool flipv) noexcept;
+    void readCharacterLine(c6502_byte_t *line,
+                           const c6502_word_t charInd,
+                           const c6502_word_t lineInd,
+                           const c6502_word_t baseAddr,
+                           const bool fliph,
+                           const bool flipv) noexcept;
+
+    PageTileInfo getTile(const int sx, const int sy) noexcept;
 };
 
 #endif	/* PPU_H */

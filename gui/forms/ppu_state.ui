@@ -7,73 +7,40 @@
     <x>0</x>
     <y>0</y>
     <width>343</width>
-    <height>474</height>
+    <height>478</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>PPU state</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Background visible</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Sprites visible</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>8x16 sprites mode</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="txtNMIEnabled">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QLabel" name="txtBgVisible">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>NMI enabled</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="txtBigSprites">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Background visible</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -90,21 +57,8 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QLabel" name="txtWriteEnabled">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="txtBigSprites">
+   <item row="4" column="1">
+    <widget class="QLabel" name="txtBgVisible">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -129,6 +83,29 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="txtNMIEnabled">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>8x16 sprites mode</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
    <item row="3" column="1">
     <widget class="QLabel" name="txtSpritesVisible">
      <property name="frameShape">
@@ -139,6 +116,16 @@
      </property>
      <property name="text">
       <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Sprites visible</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
@@ -159,6 +146,19 @@
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLabel" name="txtWriteEnabled">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string/>
      </property>
     </widget>
    </item>
@@ -337,29 +337,6 @@
     </widget>
    </item>
    <item row="15" column="0">
-    <widget class="QLabel" name="label_18">
-     <property name="text">
-      <string>Video memory read error</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="15" column="1">
-    <widget class="QLabel" name="txtReadError">
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="16" column="0">
     <widget class="QLabel" name="label_14">
      <property name="text">
       <string>Current sprite memory address</string>
@@ -369,7 +346,7 @@
      </property>
     </widget>
    </item>
-   <item row="16" column="1">
+   <item row="15" column="1">
     <widget class="QLabel" name="txtSprMemAddr">
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
@@ -382,7 +359,7 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="0">
+   <item row="16" column="0">
     <widget class="QLabel" name="label_16">
      <property name="text">
       <string>Vertical scrolling</string>
@@ -392,7 +369,7 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="1">
+   <item row="16" column="1">
     <widget class="QLabel" name="txtVscroll">
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
@@ -405,7 +382,7 @@
      </property>
     </widget>
    </item>
-   <item row="18" column="0">
+   <item row="17" column="0">
     <widget class="QLabel" name="label_17">
      <property name="text">
       <string>Horizontal scrolling</string>
@@ -415,7 +392,7 @@
      </property>
     </widget>
    </item>
-   <item row="18" column="1">
+   <item row="17" column="1">
     <widget class="QLabel" name="txtHscroll">
      <property name="frameShape">
       <enum>QFrame::Panel</enum>

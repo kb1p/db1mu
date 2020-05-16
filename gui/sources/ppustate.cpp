@@ -37,12 +37,11 @@ void PPUStateDialog::show(const PPU *pPPU)
     setIndicator(m_ui->txtFullBg, st.fullBacgroundVisible);
     setIndicator(m_ui->txtVblank, st.vblank);
     setIndicator(m_ui->txtOver8, st.over8sprites);
-    setIndicator(m_ui->txtReadError, st.vramReadError);
     setIndicator(m_ui->txtSpr0, st.sprite0);
 
     m_ui->txtBgAddr->setText(QString::number(st.baBkgnd, 16).toUpper().rightJustified(4, '0'));
     m_ui->txtSprAddr->setText(QString::number(st.baSprites, 16).toUpper().rightJustified(4, '0'));
-    m_ui->txtActivePage->setText(QString::number(st.activePage, 16).toUpper().rightJustified(4, '0'));
+    m_ui->txtActivePage->setText(QString::number(st.activePage(), 16).toUpper().rightJustified(4, '0'));
     m_ui->txtVmemAddr->setText(QString::number(st.vramAddr, 16).toUpper().rightJustified(4, '0'));
     m_ui->txtAddrIncr->setText(QString::number(st.addrIncr, 16).toUpper().rightJustified(4, '0'));
     m_ui->txtSprMemAddr->setText(QString::number(st.sprmemAddr, 16).toUpper().rightJustified(4, '0'));
@@ -61,7 +60,6 @@ void PPUStateDialog::clear()
     m_ui->txtFullBg->clear();
     m_ui->txtVblank->clear();
     m_ui->txtOver8->clear();
-    m_ui->txtReadError->clear();
     m_ui->txtBgAddr->clear();
     m_ui->txtSprAddr->clear();
     m_ui->txtActivePage->clear();
