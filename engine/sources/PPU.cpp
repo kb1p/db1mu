@@ -144,7 +144,6 @@ void PPU::onBeginVblank() noexcept
 {
     m_st.enableWrite = true;
     m_st.vblank = true;
-    m_st.sprite0 = false;
 }
 
 void PPU::onEndVblank() noexcept
@@ -176,54 +175,37 @@ void PPU::startFrame() noexcept
 {
     m_currLine = 0;
     m_frameVScroll = m_st.scrollV;
-
-    m_pBackend->setBackground(bus().readVideoMem(0x3F00u));
+    m_st.sprite0 = false;
+    m_st.over8sprites = false;
 }
 
 void PPU::drawNextLine() noexcept
 {
+    const bool NTSCLineSkip = bus().getMode() == OutputMode::NTSC &&
+                              (m_currLine < 8 || m_currLine > 231);
+
     const int t = m_frameVScroll + ((m_st.activePageIndex >> 1u) & 1u) * PPC,
               l = m_st.scrollH + (m_st.activePageIndex & 1u) * PPR,
               vo = t % 8,
               ho = l % 8;
 
-    c6502_byte_t sym[64];
-    auto readCharacter = [this, &sym](const c6502_word_t ind,
-                                      const c6502_word_t baseAddr,
-                                      const bool fliph,
-                                      const bool flipv,
-                                      c6502_byte_t clrHi,
-                                      const c6502_word_t palAddr)
-        noexcept
-    {
-        for (c6502_word_t i = 0; i < 8; i++)
-            readCharacterLine(sym + i * 8, ind, i, baseAddr, fliph, flipv);
+    // Visible line + 1 tile gap for BG scrolling + 1 tile gap for sprite clipping to the right
+    static constexpr auto LINE_WIDTH = PPR + 8 + 8;
+    c6502_byte_t lnData[LINE_WIDTH];
 
-        bool empty = true;
-
-        // Combine color values
-        clrHi <<= 2;
-        for (auto &pt: sym)
-            if (pt > 0)
-            {
-                pt = bus().readVideoMem(palAddr + (pt | clrHi)) | 0b11000000u;
-                empty = false;
-            }
-
-        return !empty;
-    };
+    // Fill with background color
+    m_bgColor = bus().readVideoMem(0x3F00u);
+    memset(lnData, m_bgColor, LINE_WIDTH);
 
     // If PPU is turned off, writing to VRAM is possible
-    m_st.enableWrite = !m_st.backgroundVisible && !m_st.spritesVisible;
+    m_st.enableWrite = NTSCLineSkip || (!m_st.backgroundVisible && !m_st.spritesVisible);
 
     // Render background
-    const bool skipTopAndBottom = bus().getMode() == OutputMode::NTSC;
-    if (m_st.backgroundVisible && m_currLine % 8 == 7 &&
-        (!skipTopAndBottom || (m_currLine >= 8 && m_currLine < 232)))
+    if (!NTSCLineSkip && m_st.backgroundVisible)
     {
-        const int y = m_currLine - 7,
+        const int y = m_currLine,
                   sy = y + t;
-        for (int c = 0; c < 32; c++)
+        for (int c = 0; c < 34; c++)
         {
             if (!m_st.fullBacgroundVisible && c == 0)
                 continue;
@@ -242,16 +224,17 @@ void PPU::drawNextLine() noexcept
             const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1u)) & 0b11u;
 
             // Load character / attribute data
-            if (readCharacter(charNum, m_st.baBkgnd, false, false, clrHi, PAL_BG))
-                m_pBackend->setSymbol(RenderingBackend::Layer::BACKGROUND,
-                                      x - ho, y - vo,
-                                      sym);
+            assert(x <= 256 + 8);
+            readCharacterLine(lnData + x, charNum, (y + vo) % 8, m_st.baBkgnd, false, false);
+            expandColor(lnData + x, clrHi, PAL_BG);
         }
     }
 
     // Render sprites
-    if (m_st.spritesVisible)
+    if (!NTSCLineSkip && m_st.spritesVisible)
     {
+        c6502_byte_t sprLnData[8];
+
         // Sprites on line counter
         int nSprites = 0;
         const c6502_byte_t lastSpriteLine = m_st.bigSprites ? 15u : 7u;
@@ -263,40 +246,58 @@ void PPU::drawNextLine() noexcept
                        attrs = bus().readSpriteMem(sa + 2),
                        x = bus().readSpriteMem(sa + 3);
 
-            if (y + lastSpriteLine != m_currLine ||
+            if (m_currLine < y || m_currLine > y + lastSpriteLine ||
                 (!m_st.allSpritesVisible && (x >> 3) == 0))
                 continue;
 
-            const auto lyr = test<5>(attrs) ?
-                             RenderingBackend::Layer::BEHIND :
-                             RenderingBackend::Layer::FRONT;
+            const bool behindBg = test<5>(attrs);
             const bool fliph = test<6>(attrs),
                        flipv = test<7>(attrs);
             const c6502_byte_t clrHi = attrs & 0b11u;
 
-            if (!m_st.bigSprites)
-            {
-                // Read symbol, parse attributes
-                if (readCharacter(nChar, m_st.baSprites, fliph, flipv, clrHi, PAL_SPR))
-                    m_pBackend->setSymbol(lyr, x, y, sym);
-            }
-            else
+            auto nEffChar = nChar;
+            auto nEffCharLn = m_currLine - y;
+            auto baddr = m_st.baSprites;
+            if (m_st.bigSprites)
             {
                 const auto e = nChar % 2;
-                const auto baddr = e == 0 ? 0u : 0x1000u;
-                if (readCharacter(nChar - e, baddr, fliph, flipv, clrHi, PAL_SPR))
-                    m_pBackend->setSymbol(lyr, x, y, sym);
+                baddr = e == 0 ? 0u : 0x1000u;
+                nEffChar = nChar - e;
+                if (nEffCharLn >= 8)
+                {
+                    nEffChar++;
+                    nEffCharLn -= 8;
+                }
+            }
 
-                if (readCharacter(nChar + 1 - e, baddr, fliph, flipv, clrHi, PAL_SPR))
-                    m_pBackend->setSymbol(lyr, x, y + 8, sym);
+            // Read symbol, parse attributes
+            readCharacterLine(sprLnData, nEffChar, nEffCharLn, baddr, fliph, flipv);
+            expandColor(sprLnData, clrHi, PAL_SPR);
+
+            // Compose sprite and background data
+            for (int i = 0; i < 8; i++)
+            {
+                assert(x + ho <= 256 + 8);
+                auto &bp = lnData[x + ho + i],
+                        &sp = sprLnData[i];
+                if (sp != m_bgColor)
+                {
+                    if (!behindBg || bp == m_bgColor)
+                        bp = sp;
+
+                    // Sprite 0 hit test
+                    if (ns == 0 && bp != m_bgColor && x < 255u)
+                        m_st.sprite0 = true;
+                }
             }
 
             nSprites++;
-            if (ns == 0)
-                m_st.sprite0 = true;
         }
-        m_st.over8sprites = nSprites > 8;
+        if (nSprites > 8)
+            m_st.over8sprites = true;
     }
+
+    m_pBackend->setLine(m_currLine, lnData + ho);
 
     m_currLine++;
 }
@@ -325,4 +326,17 @@ void PPU::readCharacterLine(c6502_byte_t *line,
         const auto fj = (fliph ? j : 7u - j);
         *line++ = (((r1 >> fj) & 1u) << 1u) | ((r0 >> fj) & 1u);
     }
+}
+
+void PPU::expandColor(c6502_byte_t *p,
+                      c6502_byte_t clrHi,
+                      const c6502_word_t palAddr)
+    noexcept
+{
+    assert(p != nullptr);
+
+    // Combine color values
+    clrHi <<= 2;
+    for (int i = 0; i < 8; i++, p++)
+        *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : m_bgColor;
 }

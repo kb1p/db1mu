@@ -4,22 +4,20 @@
 #include <PPU.h>
 
 #include <QOpenGLFunctions>
+#include <cstdint>
 
 class GLRenderingBackend: public PPU::RenderingBackend
 {
-    static constexpr GLsizei FBO_WIDTH = 256,
-                             FBO_HEIGHT = 240;
+    static constexpr int TEX_WIDTH = 256,
+                         TEX_HEIGHT = 240;
 
     QOpenGLFunctions *m_gl = nullptr;
-    GLuint m_shdr1st = 0,
-           m_shdr2nd = 0,
+    GLuint m_shdr = 0,
            m_vbo = 0,
-           m_fbo = 0,
            m_tex = 0;
     GLint m_uPos = 0,
           m_uSpriteData = 0,
           m_uTexture = 0;
-    GLint m_viewPort[4] = { };
 
     // NES to RGB
     GLint m_palette[64] = {
@@ -89,25 +87,7 @@ class GLRenderingBackend: public PPU::RenderingBackend
         0b000000000000000u
     };
 
-    struct TileData
-    {
-        int x, y;
-        GLint pixels[64];
-    };
-
-    static constexpr int MAX_TILES_BEHIND = 128,
-                         MAX_TILES_FRONT = 128,
-                         MAX_TILES_BACKGROUND = 33 * 31;
-
-    // Character data sorted by layer
-    TileData m_layerBehind[MAX_TILES_BEHIND],
-             m_layerBg[MAX_TILES_BACKGROUND],
-             m_layerFront[MAX_TILES_FRONT];
-    int m_nTilesBehind = 0,
-        m_nTilesBg = 0,
-        m_nTilesFront = 0;
-
-    void renderCharacter(const TileData &chData) const noexcept;
+    uint8_t m_texData[TEX_WIDTH * TEX_HEIGHT * 4];
 
 public:
     ~GLRenderingBackend()
@@ -118,8 +98,7 @@ public:
     void init(QOpenGLFunctions *glFunctions);
     void release();
 
-    void setBackground(c6502_byte_t color) override;
-    void setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64]) override;
+    void setLine(const int n, const c6502_byte_t *pColorData) override;
     void draw() override;
 };
 

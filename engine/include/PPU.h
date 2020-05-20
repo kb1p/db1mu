@@ -16,21 +16,13 @@ public:
         virtual ~RenderingBackend() = default;
 
     public:
-        enum class Layer
-        {
-            BEHIND = 0,
-            BACKGROUND = 1,
-            FRONT = 2
-        };
-
         RenderingBackend(const RenderingBackend&) = delete;
         RenderingBackend(RenderingBackend&&) = delete;
 
         RenderingBackend &operator=(const RenderingBackend&) = delete;
         RenderingBackend &operator=(RenderingBackend&&) = delete;
 
-        virtual void setBackground(c6502_byte_t color) = 0;
-        virtual void setSymbol(Layer l, int x, int y, c6502_byte_t colorData[64]) = 0;
+        virtual void setLine(const int n, const c6502_byte_t *pColorData) = 0;
         virtual void draw() = 0;
 
         void setPPUInstance(PPU *pPPU) noexcept
@@ -138,7 +130,8 @@ private:
     State m_st;
     int m_scrollSwitch = 0;
     int m_currLine = 0;
-    c6502_byte_t m_frameVScroll = 0;
+    c6502_byte_t m_frameVScroll = 0,
+                 m_bgColor = 0;
 
     void readCharacterLine(c6502_byte_t *line,
                            const c6502_word_t charInd,
@@ -146,6 +139,10 @@ private:
                            const c6502_word_t baseAddr,
                            const bool fliph,
                            const bool flipv) noexcept;
+
+    void expandColor(c6502_byte_t *p,
+                     c6502_byte_t clrHi,
+                     const c6502_word_t palAddr) noexcept;
 
     PageTileInfo getTile(const int sx, const int sy) noexcept;
 };
