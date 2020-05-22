@@ -98,7 +98,9 @@ public:
     void init(QOpenGLFunctions *glFunctions);
     void release();
 
-    void setLine(const int n, const c6502_byte_t *pColorData) override;
+    void setLine(const int n,
+                 const c6502_byte_t *pColorData,
+                 const c6502_byte_t bgColor) override;
     void draw() override;
 };
 

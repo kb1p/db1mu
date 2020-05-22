@@ -194,8 +194,7 @@ void PPU::drawNextLine() noexcept
     c6502_byte_t lnData[LINE_WIDTH];
 
     // Fill with background color
-    m_bgColor = bus().readVideoMem(0x3F00u);
-    memset(lnData, m_bgColor, LINE_WIDTH);
+    memset(lnData, TRANSPARENT, LINE_WIDTH);
 
     // If PPU is turned off, writing to VRAM is possible
     m_st.enableWrite = NTSCLineSkip || (!m_st.backgroundVisible && !m_st.spritesVisible);
@@ -279,14 +278,14 @@ void PPU::drawNextLine() noexcept
             {
                 assert(x + ho <= 256 + 8);
                 auto &bp = lnData[x + ho + i],
-                        &sp = sprLnData[i];
-                if (sp != m_bgColor)
+                     &sp = sprLnData[i];
+                if (sp != TRANSPARENT)
                 {
-                    if (!behindBg || bp == m_bgColor)
+                    if (!behindBg || bp == TRANSPARENT)
                         bp = sp;
 
                     // Sprite 0 hit test
-                    if (ns == 0 && bp != m_bgColor && x < 255u)
+                    if (ns == 0 && bp != TRANSPARENT && x < 255u)
                         m_st.sprite0 = true;
                 }
             }
@@ -297,7 +296,7 @@ void PPU::drawNextLine() noexcept
             m_st.over8sprites = true;
     }
 
-    m_pBackend->setLine(m_currLine, lnData + ho);
+    m_pBackend->setLine(m_currLine, lnData + ho, bus().readVideoMem(0x3F00u));
 
     m_currLine++;
 }
@@ -338,5 +337,5 @@ void PPU::expandColor(c6502_byte_t *p,
     // Combine color values
     clrHi <<= 2;
     for (int i = 0; i < 8; i++, p++)
-        *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : m_bgColor;
+        *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : TRANSPARENT;
 }

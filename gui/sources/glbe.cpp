@@ -1,4 +1,5 @@
 #include "glbe.h"
+#include "common.h"
 #include <cassert>
 #include <QDebug>
 
@@ -133,20 +134,23 @@ void GLRenderingBackend::release()
     m_gl->glDeleteProgram(m_shdr);
 }
 
-void GLRenderingBackend::setLine(const int n, const c6502_byte_t *pColorData)
+void GLRenderingBackend::setLine(const int n,
+                                 const c6502_byte_t *pColorData,
+                                 const c6502_byte_t bgColor)
 {
-    Q_ASSERT(pColorData != nullptr);
+    assert(pColorData != nullptr);
 
     // Convert NES character (NES palette) into tile (RGB palette)
     auto *pDest = m_texData + (TEX_HEIGHT - 1 - n) * TEX_WIDTH * 4;
     for (int i = 0; i < TEX_WIDTH; i++, pDest += 4)
     {
-        const auto s = m_palette[pColorData[i] & 0x3Fu];
+        const auto c = pColorData[i] != PPU::TRANSPARENT ? pColorData[i] : bgColor;
+        assert(c < 64);
+        const auto s = m_palette[c];
         constexpr unsigned b5m = 0b11111u;
-        constexpr float stp = 255.0f / 31.0f;
-        pDest[0] = static_cast<uint8_t>(stp * static_cast<float>((s >> 10) & b5m));
-        pDest[1] = static_cast<uint8_t>(stp * static_cast<float>((s >> 5) & b5m));
-        pDest[2] = static_cast<uint8_t>(stp * static_cast<float>(s & b5m));
+        pDest[0] = static_cast<uint8_t>(divrnd(((s >> 10) & b5m) * 255, 31));
+        pDest[1] = static_cast<uint8_t>(divrnd(((s >> 5) & b5m) * 255, 31));
+        pDest[2] = static_cast<uint8_t>(divrnd((s & b5m) * 255, 31));
         pDest[3] = 255u;
     }
 }
@@ -156,8 +160,6 @@ void GLRenderingBackend::draw()
     // Upload texture data
     m_gl->glBindTexture(GL_TEXTURE_2D, m_tex);
     m_gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_texData);
-
-    m_gl->glClear(GL_COLOR_BUFFER_BIT);
 
     // Render FBO contents to screen with scaling
     m_gl->glUseProgram(m_shdr);

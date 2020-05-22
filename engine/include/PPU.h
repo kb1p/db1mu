@@ -22,7 +22,9 @@ public:
         RenderingBackend &operator=(const RenderingBackend&) = delete;
         RenderingBackend &operator=(RenderingBackend&&) = delete;
 
-        virtual void setLine(const int n, const c6502_byte_t *pColorData) = 0;
+        virtual void setLine(const int n,
+                             const c6502_byte_t *pColorData,
+                             const c6502_byte_t bgColor) = 0;
         virtual void draw() = 0;
 
         void setPPUInstance(PPU *pPPU) noexcept
@@ -103,6 +105,8 @@ public:
     {
         return m_st;
     }
+
+    static constexpr c6502_byte_t TRANSPARENT = 0x80u;
 
 private:
     struct PageTileInfo
