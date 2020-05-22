@@ -92,8 +92,7 @@ void GLRenderingBackend::init(QOpenGLFunctions *glFunctions)
     m_gl->glCullFace(GL_BACK);
     m_gl->glFrontFace(GL_CCW);
     m_gl->glEnable(GL_CULL_FACE);
-    m_gl->glEnable(GL_BLEND);
-    m_gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    m_gl->glDisable(GL_BLEND);
     m_gl->glDisable(GL_DEPTH_TEST);
 
     m_shdr = createShaderProgram(m_gl, VS_SRC, FS_SRC);
@@ -157,6 +156,8 @@ void GLRenderingBackend::setLine(const int n,
 
 void GLRenderingBackend::draw()
 {
+    m_gl->glClear(GL_COLOR_BUFFER_BIT);
+
     // Upload texture data
     m_gl->glBindTexture(GL_TEXTURE_2D, m_tex);
     m_gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_texData);
