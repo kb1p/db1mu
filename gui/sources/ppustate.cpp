@@ -45,8 +45,8 @@ void PPUStateDialog::show(const PPU *pPPU)
     m_ui->txtVmemAddr->setText(QString::number(st.vramAddr, 16).toUpper().rightJustified(4, '0'));
     m_ui->txtAddrIncr->setText(QString::number(st.addrIncr, 16).toUpper().rightJustified(4, '0'));
     m_ui->txtSprMemAddr->setText(QString::number(st.sprmemAddr, 16).toUpper().rightJustified(4, '0'));
-    m_ui->txtVscroll->setText(QString::number(st.scrollV));
-    m_ui->txtHscroll->setText(QString::number(st.scrollH));
+    //m_ui->txtVscroll->setText(QString::number(st.scrollV));
+    //m_ui->txtHscroll->setText(QString::number(st.scrollH));
 }
 
 void PPUStateDialog::clear()

@@ -43,7 +43,7 @@ public:
     // Prohibit copying
     PPU(const PPU&) = delete;
     PPU &operator=(const PPU&) = delete;
-    
+
     enum Registers: c6502_word_t
     {
         CONTROL1 = 0,
@@ -72,16 +72,17 @@ public:
         c6502_word_t baBkgnd = 0,
                      baSprites = 0,
                      addrIncr = 1,
-                     activePageIndex = 0,
                      vramAddr = 0,
+                     tmpAddr = 0,
+                     fineX = 0,
                      sprmemAddr = 0;
-        c6502_byte_t scrollV = 0,
-                     scrollH = 0,
-                     vramReadBuf = 0;
+        c6502_byte_t vramReadBuf = 0;
+        int w = 0;
 
         c6502_word_t activePage() const noexcept
         {
-            return 0x2000u + activePageIndex * 0x400u;
+            const c6502_word_t index = (vramAddr >> 10u) & 0b11u;
+            return 0x2000u + index * 0x400u;
         }
     };
 
@@ -109,33 +110,13 @@ public:
     static constexpr c6502_byte_t TRANSPARENT = 0x80u;
 
 private:
-    struct PageTileInfo
-    {
-        c6502_word_t pageAddr,
-                     charIndex,
-                     attrIndex;
-
-        c6502_word_t characterAddress() const noexcept
-        {
-            return pageAddr + charIndex;
-        }
-
-        c6502_word_t attributeAddress() const noexcept
-        {
-            return pageAddr + attrIndex + 960u;
-        }
-    };
-
     static constexpr int PPR = 256,
                          PPC = 240;
 
     RenderingBackend *const m_pBackend;
 
     State m_st;
-    int m_scrollSwitch = 0;
     int m_currLine = 0;
-    c6502_byte_t m_frameVScroll = 0,
-                 m_bgColor = 0;
 
     void readCharacterLine(c6502_byte_t *line,
                            const c6502_word_t charInd,
@@ -147,8 +128,6 @@ private:
     void expandColor(c6502_byte_t *p,
                      c6502_byte_t clrHi,
                      const c6502_word_t palAddr) noexcept;
-
-    PageTileInfo getTile(const int sx, const int sy) noexcept;
 };
 
 #endif	/* PPU_H */

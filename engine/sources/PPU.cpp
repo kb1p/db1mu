@@ -30,7 +30,7 @@ c6502_byte_t PPU::readRegister(c6502_word_t n) noexcept
                 rv |= bit<7>();
 
             m_st.vblank = false;
-            m_scrollSwitch = 0;
+            m_st.w = 0;
             break;
         case SPRMEM_DATA:
             rv = bus().readSpriteMem(m_st.sprmemAddr++);
@@ -62,7 +62,8 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
     switch (n)
     {
         case CONTROL1:
-            m_st.activePageIndex = val & 0b11u;
+            m_st.tmpAddr &= 0b1111001111111111u;
+            m_st.tmpAddr |= ((val & 0b11u) << 10u);
             m_st.addrIncr = test<2>(val) ? 32u : 1u;
             m_st.baSprites = test<3>(val) ? 0x1000u : 0;
             m_st.baBkgnd = test<4>(val) ? 0x1000u : 0;
@@ -108,9 +109,18 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             bus().writeSpriteMem(m_st.sprmemAddr++, val);
             break;
         case VIDMEM_ADDR:
-            m_st.vramAddr <<= 8;
-            m_st.vramAddr &= 0xFF00u;
-            m_st.vramAddr |= val & 0xFFu;
+            if (m_st.w == 0)
+            {
+                m_st.tmpAddr &= 0x00FFu;
+                m_st.tmpAddr |= (val & 0x7Fu) << 8u;
+            }
+            else
+            {
+                m_st.tmpAddr &= 0xFF00u;
+                m_st.tmpAddr |= val;
+                m_st.vramAddr = m_st.tmpAddr;
+            }
+            m_st.w ^= 1;
 
             Log::v("vram address = %X", m_st.vramAddr);
             break;
@@ -123,17 +133,21 @@ void PPU::writeRegister(c6502_word_t n, c6502_byte_t val) noexcept
             }
             break;
         case SCROLL:
-            if (m_scrollSwitch == 0)
+            if (m_st.w == 0)
             {
-                m_st.scrollH = val;
-                Log::v("hscroll = %d", m_st.scrollH);
+                m_st.fineX = val & 0b111u;
+                m_st.tmpAddr &= 0b1111111111100000u;
+                m_st.tmpAddr |= (val >> 3u) & 0b11111u;
+                Log::v("hscroll = %d", val);
             }
             else
             {
-                m_st.scrollV = val;
-                Log::v("vscroll = %d", m_st.scrollV);
+                m_st.tmpAddr &= 0b1000110000011111u;
+                m_st.tmpAddr |= (val & 0b111u) << 12u;
+                m_st.tmpAddr |= (val & 0b11111000u) << 2u;
+                Log::v("vscroll = %d", val);
             }
-            m_scrollSwitch ^= 1;
+            m_st.w ^= 1;
             break;
         default:
             assert(false && "Illegal PPU register for writing");
@@ -152,31 +166,15 @@ void PPU::onEndVblank() noexcept
     m_st.vblank = false;
 }
 
-PPU::PageTileInfo PPU::getTile(const int sx, const int sy) noexcept
-{
-    static constexpr c6502_word_t PAGE_LAYOUT[2][2] = {
-        { 0x2000u, 0x2400u },
-        { 0x2800u, 0x2C00u }
-    };
-
-    PageTileInfo ti;
-    ti.pageAddr = PAGE_LAYOUT[sy / PPC % 2][sx / PPR % 2];
-
-    const auto psx = sx % PPR,  // page x coordinate
-               psy = sy % PPC;  // page y coordinate
-
-    ti.charIndex = (psy / 8) * 32 + psx / 8,  // index in character area
-    ti.attrIndex = (psy / 32) * 8 + psx / 32; // index in attributes area
-
-    return ti;
-}
-
 void PPU::startFrame() noexcept
 {
     m_currLine = 0;
-    m_frameVScroll = m_st.scrollV;
     m_st.sprite0 = false;
     m_st.over8sprites = false;
+
+    // Pre-rendering scanline emulation
+    if (m_st.backgroundVisible || m_st.spritesVisible)
+        m_st.vramAddr = m_st.tmpAddr;
 }
 
 void PPU::drawNextLine() noexcept
@@ -184,10 +182,12 @@ void PPU::drawNextLine() noexcept
     const bool NTSCLineSkip = bus().getMode() == OutputMode::NTSC &&
                               (m_currLine < 8 || m_currLine > 231);
 
-    const int t = m_frameVScroll + ((m_st.activePageIndex >> 1u) & 1u) * PPC,
-              l = m_st.scrollH + (m_st.activePageIndex & 1u) * PPR,
-              vo = t % 8,
-              ho = l % 8;
+    constexpr c6502_word_t M_COARSE_Y = 0b1111100000u,
+                           M_FINE_Y = 0b111000000000000u,
+                           M_COARSE_X = 0b11111u;
+
+    const c6502_word_t fineY = (m_st.vramAddr >> 12u) & 0b111u,
+                       fineX = m_st.fineX;
 
     // Visible line + 1 tile gap for BG scrolling + 1 tile gap for sprite clipping to the right
     static constexpr auto LINE_WIDTH = PPR + 8 + 8;
@@ -197,35 +197,44 @@ void PPU::drawNextLine() noexcept
     memset(lnData, TRANSPARENT, LINE_WIDTH);
 
     // If PPU is turned off, writing to VRAM is possible
-    m_st.enableWrite = NTSCLineSkip || (!m_st.backgroundVisible && !m_st.spritesVisible);
+    const bool enableRendering = m_st.backgroundVisible || m_st.spritesVisible;
+    m_st.enableWrite = NTSCLineSkip || !enableRendering;
 
     // Render background
     if (!NTSCLineSkip && m_st.backgroundVisible)
     {
-        const int y = m_currLine,
-                  sy = y + t;
-        for (int c = 0; c < 34; c++)
+        for (int c = 0; c < 32; c++)
         {
             if (!m_st.fullBacgroundVisible && c == 0)
                 continue;
 
-            const int x = c * 8,
-                      sx = x + l;
-
-            const auto ti = getTile(sx, sy);
-
             // Read character index from character area
-            const auto charNum = bus().readVideoMem(ti.characterAddress());
+            const c6502_word_t charAddr = 0x2000u | (m_st.vramAddr & 0x0FFFu);
+            const auto charNum = bus().readVideoMem(charAddr);
 
             // Read color information from attribute area
-            const auto clrGrp = bus().readVideoMem(ti.attributeAddress());
-            const auto offInGrp = sy / 16 % 2 * 2 + sx / 16 % 2;
-            const c6502_byte_t clrHi = (clrGrp >> (offInGrp << 1u)) & 0b11u;
+            const c6502_word_t attrAddr = 0x23C0u |
+                                          (m_st.vramAddr & 0b110000000000u) |
+                                          ((m_st.vramAddr >> 4u) & 0b111000u) |
+                                          ((m_st.vramAddr >> 2u) & 0b111u);
+            const auto clrGrp = bus().readVideoMem(attrAddr);
+            const auto offInGrp = ((m_st.vramAddr >> 5u) & 0b10u) |
+                                  ((m_st.vramAddr >> 1u) & 0b01u);
+            const c6502_byte_t clrHi = (clrGrp >> offInGrp * 2u) & 0b11u;
 
             // Load character / attribute data
-            assert(x <= 256 + 8);
-            readCharacterLine(lnData + x, charNum, (y + vo) % 8, m_st.baBkgnd, false, false);
+            const c6502_word_t x = c * 8u;
+            assert(x < 256u);
+            readCharacterLine(lnData + x, charNum, fineY, m_st.baBkgnd, false, false);
             expandColor(lnData + x, clrHi, PAL_BG);
+
+            if ((m_st.vramAddr & M_COARSE_X) < M_COARSE_X)
+                m_st.vramAddr++;
+            else
+            {
+                m_st.vramAddr &= ~M_COARSE_X;
+                m_st.vramAddr ^= 0x400u;
+            }
         }
     }
 
@@ -276,17 +285,17 @@ void PPU::drawNextLine() noexcept
             // Compose sprite and background data
             for (int i = 0; i < 8; i++)
             {
-                assert(x + ho <= 256 + 8);
-                auto &bp = lnData[x + ho + i],
+                assert(x + fineX <= 256 + 8);
+                auto &bp = lnData[x + fineX + i],
                      &sp = sprLnData[i];
                 if (sp != TRANSPARENT)
                 {
-                    if (!behindBg || bp == TRANSPARENT)
-                        bp = sp;
-
                     // Sprite 0 hit test
                     if (ns == 0 && bp != TRANSPARENT && x < 255u)
                         m_st.sprite0 = true;
+
+                    if (!behindBg || bp == TRANSPARENT)
+                        bp = sp;
                 }
             }
 
@@ -296,7 +305,36 @@ void PPU::drawNextLine() noexcept
             m_st.over8sprites = true;
     }
 
-    m_pBackend->setLine(m_currLine, lnData + ho, bus().readVideoMem(0x3F00u));
+    if (enableRendering)
+    {
+        // Increment Y position in memory access register
+        if ((m_st.vramAddr & M_FINE_Y) < M_FINE_Y)
+            m_st.vramAddr += 0b1000000000000u;
+        else
+        {
+            m_st.vramAddr &= ~M_FINE_Y;
+            c6502_word_t crY = (m_st.vramAddr >> 5u) & 0b11111u;
+            switch (crY)
+            {
+                case 29:
+                    m_st.vramAddr ^= 0x800u;
+                case 31:
+                    crY = 0u;
+                    break;
+                default:
+                    crY++;
+            }
+            m_st.vramAddr &= ~M_COARSE_Y;
+            m_st.vramAddr |= (crY << 5u) & M_COARSE_Y;
+        }
+
+        // Copy bits related to horizontal position
+        constexpr c6502_word_t CPYMSK = 0b000010000011111u;
+        m_st.vramAddr &= ~CPYMSK;
+        m_st.vramAddr |= m_st.tmpAddr & CPYMSK;
+    }
+
+    m_pBackend->setLine(m_currLine, lnData + fineX, bus().readVideoMem(0x3F00u));
 
     m_currLine++;
 }
