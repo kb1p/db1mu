@@ -200,6 +200,14 @@ void PPU::drawNextLine() noexcept
     const bool enableRendering = m_st.backgroundVisible || m_st.spritesVisible;
     m_st.enableWrite = NTSCLineSkip || !enableRendering;
 
+    if (enableRendering)
+    {
+        // Copy bits related to horizontal position
+        constexpr c6502_word_t CPYMSK = 0b000010000011111u;
+        m_st.vramAddr &= ~CPYMSK;
+        m_st.vramAddr |= m_st.tmpAddr & CPYMSK;
+    }
+
     // Render background
     if (!NTSCLineSkip && m_st.backgroundVisible)
     {
@@ -327,11 +335,6 @@ void PPU::drawNextLine() noexcept
             m_st.vramAddr &= ~M_COARSE_Y;
             m_st.vramAddr |= (crY << 5u) & M_COARSE_Y;
         }
-
-        // Copy bits related to horizontal position
-        constexpr c6502_word_t CPYMSK = 0b000010000011111u;
-        m_st.vramAddr &= ~CPYMSK;
-        m_st.vramAddr |= m_st.tmpAddr & CPYMSK;
     }
 
     m_pBackend->setLine(m_currLine, lnData + fineX, bus().readVideoMem(0x3F00u));
