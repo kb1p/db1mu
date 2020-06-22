@@ -203,7 +203,7 @@ void PPU::drawNextLine() noexcept
     // Render background
     if (!NTSCLineSkip && m_st.backgroundVisible)
     {
-        for (int c = 0; c < 32; c++)
+        for (int c = 0; c < 33; c++)
         {
             if (!m_st.fullBacgroundVisible && c == 0)
                 continue;
@@ -224,7 +224,7 @@ void PPU::drawNextLine() noexcept
 
             // Load character / attribute data
             const c6502_word_t x = c * 8u;
-            assert(x < 256u);
+            assert(x <= 256u);
             readCharacterLine(lnData + x, charNum, fineY, m_st.baBkgnd, false, false);
             expandColor(lnData + x, clrHi, PAL_BG);
 
