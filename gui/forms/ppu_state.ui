@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>343</width>
-    <height>478</height>
+    <height>473</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -362,7 +362,7 @@
    <item row="16" column="0">
     <widget class="QLabel" name="label_16">
      <property name="text">
-      <string>Vertical scrolling</string>
+      <string>v</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -370,7 +370,7 @@
     </widget>
    </item>
    <item row="16" column="1">
-    <widget class="QLabel" name="txtVscroll">
+    <widget class="QLabel" name="txtV">
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
      </property>
@@ -385,7 +385,7 @@
    <item row="17" column="0">
     <widget class="QLabel" name="label_17">
      <property name="text">
-      <string>Horizontal scrolling</string>
+      <string>t</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -393,7 +393,7 @@
     </widget>
    </item>
    <item row="17" column="1">
-    <widget class="QLabel" name="txtHscroll">
+    <widget class="QLabel" name="txtT">
      <property name="frameShape">
       <enum>QFrame::Panel</enum>
      </property>
