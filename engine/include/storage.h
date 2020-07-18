@@ -23,6 +23,24 @@ public:
         memset(m_mem, 0, SIZE);
     }
 
+    template <typename OutStreamT>
+    void Save(OutStreamT &strm)
+    {
+        using CharT = typename OutStreamT::char_type;
+        static_assert(SIZE % sizeof(CharT) == 0);
+        strm.write(reinterpret_cast<const CharT*>(m_mem),
+                   SIZE / sizeof(CharT));
+    }
+
+    template <typename InStreamT>
+    void Load(InStreamT &strm)
+    {
+        using CharT = typename InStreamT::char_type;
+        static_assert(SIZE % sizeof(CharT) == 0);
+        strm.read(reinterpret_cast<CharT*>(m_mem),
+                  SIZE / sizeof(CharT));
+    }
+
 private:
     c6502_byte_t m_mem[SIZE];
 };

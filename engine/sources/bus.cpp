@@ -6,6 +6,7 @@
 #include "log.h"
 
 #include <cassert>
+#include <fstream>
 
 void Bus::injectCartrige(Cartrige *cart)
 {
@@ -232,4 +233,66 @@ void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
 
         m_vram.Write(addr, val);
     }
+}
+
+static const char MAGIC[] = { 'D', 'B', '1', 'M', 'U', 'S', 'S', 0u, 0u, 0u };
+
+/* Binary state format (to be revised):
+ * 0000: MAGIC (10 bytes)
+ * 000A: CPU state (7 bytes)
+ * 0011: PPU state (27 bytes)
+ * 002C: RAM snapshot (2048 bytes)
+ * 082C: Sprite memory snapshot (256 bytes)
+ * 092C: Video memory shapshot (solid array, 8192 bytes)
+ * 292C: Power-independent memory snapshot (8192 bytes)
+ */
+
+void Bus::saveState(const char *fileName)
+{
+    std::ofstream fout { fileName,
+                         std::ios_base::out | std::ios_base::binary };
+
+
+    // Write magic
+    fout.write(MAGIC, sizeof(MAGIC));
+
+    // Dump CPU state
+    m_pCPU->saveState(fout);
+
+    // Dump PPU state
+    m_pPPU->saveState(fout);
+
+    // Dump memory
+    m_ram.Save(fout);
+    m_spriteMem.Save(fout);
+    m_vram.Save(fout);
+    m_wram.Save(fout);
+
+    // TODO: add mapper state
+}
+
+void Bus::loadState(const char *fileName)
+{
+    std::ifstream fin { fileName,
+                        std::ios_base::in | std::ios_base::binary };
+
+    // Validate magic
+    char magicBuf[sizeof(MAGIC)];
+    fin.read(magicBuf, sizeof(MAGIC));
+    if (memcmp(magicBuf, MAGIC, sizeof(MAGIC)) != 0)
+        throw Exception { Exception::IllegalFormat, "wrong magic number" };
+
+    // Read CPU state
+    m_pCPU->loadState(fin);
+
+    // Read PPU state
+    m_pPPU->loadState(fin);
+
+    // Read memory
+    m_ram.Load(fin);
+    m_spriteMem.Load(fin);
+    m_vram.Load(fin);
+    m_wram.Load(fin);
+
+    // TODO: add mapper state
 }

@@ -109,6 +109,9 @@ public:
 
     static constexpr c6502_byte_t TRANSPARENT = 0x80u;
 
+    size_t saveState(std::ostream &out) override;
+    size_t loadState(std::istream &in) override;
+
 private:
     static constexpr int PPR = 256,
                          PPC = 240;

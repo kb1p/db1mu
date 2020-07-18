@@ -85,6 +85,9 @@ public:
         return (m_regs.p & (1u << off)) >> off;
     }
 
+    size_t saveState(std::ostream &out) override;
+    size_t loadState(std::istream &in) override;
+
 private:
     Reg m_regs;
 

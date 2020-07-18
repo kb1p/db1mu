@@ -1023,3 +1023,31 @@ int CPU6502::step(const int clk)
 
     return rt;
 }
+
+size_t CPU6502::saveState(std::ostream &out)
+{
+    out.put(lo_byte(m_regs.pc));
+    out.put(hi_byte(m_regs.pc));
+    out.put(m_regs.p);
+    out.put(m_regs.s);
+    out.put(m_regs.a);
+    out.put(m_regs.x);
+    out.put(m_regs.y);
+
+    return 7;
+}
+
+size_t CPU6502::loadState(std::istream &in)
+{
+    std::istream::char_type t[7];
+    in.read(t, 7);
+
+    m_regs.pc = combine(t[0], t[1]);
+    m_regs.p = t[2];
+    m_regs.s = t[3];
+    m_regs.a = t[4];
+    m_regs.x = t[5];
+    m_regs.y = t[6];
+
+    return 7;
+}

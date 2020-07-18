@@ -63,6 +63,8 @@ protected Q_SLOTS:
     void resumeEmulation();
     void stepEmulation();
     void fpsUpdated(float fps);
+    void saveState();
+    void loadState();
 
 private:
     Ui::b1MainWindow *m_ui = nullptr;

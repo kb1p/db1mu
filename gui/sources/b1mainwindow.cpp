@@ -217,6 +217,58 @@ void b1MainWindow::fpsUpdated(float fps)
     statusBar()->showMessage(tr("%1 FPS").arg(fps, 5, 'f', 0));
 }
 
+void b1MainWindow::saveState()
+{
+    const auto fn = QFileDialog::getSaveFileName(this,
+                                                 tr("Select file to save state to"),
+                                                 tr("."),
+                                                 tr("Db1mu state files (*.dst)"));
+    if (!fn.isNull())
+    {
+        if (m_screen->isRunning())
+            m_screen->pause();
+
+        try
+        {
+            m_eng->bus.saveState(fn.toLocal8Bit().data());
+        }
+        catch (const Exception &ex)
+        {
+            QMessageBox::critical(this,
+                                  tr("Cannot save state"),
+                                  tr("Error: %1").arg(ex.message()));
+        }
+        updateUI();
+        m_screen->resume();
+    }
+}
+
+void b1MainWindow::loadState()
+{
+    const auto fn = QFileDialog::getOpenFileName(this,
+                                                 tr("Select state file to load"),
+                                                 tr("."),
+                                                 tr("Db1mu state files (*.dst)"));
+    if (!fn.isNull())
+    {
+        if (m_screen->isRunning())
+            m_screen->pause();
+
+        try
+        {
+            m_eng->bus.loadState(fn.toLocal8Bit().data());
+        }
+        catch (const Exception &ex)
+        {
+            QMessageBox::critical(this,
+                                  tr("Cannot load state"),
+                                  tr("Error: %1").arg(ex.message()));
+        }
+        updateUI();
+        m_screen->resume();
+    }
+}
+
 void b1MainWindow::keyPressEvent(QKeyEvent *e)
 {
     const auto key = e->key();

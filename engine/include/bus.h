@@ -115,6 +115,9 @@ public:
     {
         m_spriteMem.Write(addr, val);
     }
+
+    void saveState(const char *fileName);
+    void loadState(const char *fileName);
 };
 
 #endif

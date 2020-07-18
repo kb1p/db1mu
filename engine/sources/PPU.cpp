@@ -380,3 +380,102 @@ void PPU::expandColor(c6502_byte_t *p,
     for (int i = 0; i < 8; i++, p++)
         *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : TRANSPARENT;
 }
+
+void writeBool(std::ostream &out, bool v)
+{
+    out.put(v ? 1 : 0);
+}
+
+void writeWord(std::ostream &out, c6502_word_t v)
+{
+    out.put(lo_byte(v));
+    out.put(hi_byte(v));
+}
+
+void writeByte(std::ostream &out, c6502_byte_t v)
+{
+    out.put(v);
+}
+
+bool readBool(std::istream &in)
+{
+    std::istream::char_type t;
+    in.get(t);
+    return t == 1;
+}
+
+c6502_word_t readWord(std::istream &in)
+{
+    std::istream::char_type t[2];
+    in.read(t, 2);
+    return combine(t[0], t[1]);
+}
+
+c6502_byte_t readByte(std::istream &in)
+{
+    std::istream::char_type t;
+    in.get(t);
+    return t;
+}
+
+size_t PPU::saveState(std::ostream &out)
+{
+    const auto s = out.tellp();
+
+    writeBool(out, m_st.enableNMI);
+    writeBool(out, m_st.bigSprites);
+    writeBool(out, m_st.spritesVisible);
+    writeBool(out, m_st.backgroundVisible);
+    writeBool(out, m_st.allSpritesVisible);
+    writeBool(out, m_st.fullBacgroundVisible);
+    writeBool(out, m_st.vblank);
+    writeBool(out, m_st.sprite0);
+    writeBool(out, m_st.enableWrite);
+    writeBool(out, m_st.over8sprites);
+    writeWord(out, m_st.baBkgnd);
+    writeWord(out, m_st.baSprites);
+    writeWord(out, m_st.addrIncr);
+    writeWord(out, m_st.vramAddr);
+    writeWord(out, m_st.tmpAddr);
+    writeWord(out, m_st.fineX);
+    writeWord(out, m_st.sprmemAddr);
+    writeByte(out, m_st.vramReadBuf);
+    writeByte(out, m_st.w);
+    writeByte(out, m_currLine);
+
+    const auto len = out.tellp() - s;
+    assert(len == 27);
+
+    return 27;
+}
+
+size_t PPU::loadState(std::istream &in)
+{
+    const auto s = in.tellg();
+
+    m_st.enableNMI = readBool(in);
+    m_st.bigSprites = readBool(in);
+    m_st.spritesVisible = readBool(in);
+    m_st.backgroundVisible = readBool(in);
+    m_st.allSpritesVisible = readBool(in);
+    m_st.fullBacgroundVisible = readBool(in);
+    m_st.vblank = readBool(in);
+    m_st.sprite0 = readBool(in);
+    m_st.enableWrite = readBool(in);
+    m_st.over8sprites = readBool(in);
+    m_st.baBkgnd = readWord(in);
+    m_st.baSprites = readWord(in);
+    m_st.addrIncr = readWord(in);
+    m_st.vramAddr = readWord(in);
+    m_st.tmpAddr = readWord(in);
+    m_st.fineX = readWord(in);
+    m_st.sprmemAddr = readWord(in);
+    m_st.vramReadBuf = readByte(in);
+    m_st.w = readByte(in);
+    m_currLine = readByte(in);
+
+    const auto len = in.tellg() - s;
+    assert(len == 27);
+
+    return 27;
+}

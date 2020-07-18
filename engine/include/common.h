@@ -5,6 +5,7 @@
 #define COMMON_H
 
 #include <stdint.h>
+#include <iostream>
 #include <cassert>
 
 typedef uint8_t c6502_byte_t;
@@ -80,6 +81,19 @@ protected:
     {
         assert(m_pBus != nullptr && "component is not attached to the Bus");
         return *m_pBus;
+    }
+
+public:
+    virtual size_t saveState(std::ostream&)
+    {
+        assert(false && "save is not implemented");
+        return 0;
+    }
+
+    virtual size_t loadState(std::istream&)
+    {
+        assert(false && "load is not implemented");
+        return 0;
     }
 };
 
