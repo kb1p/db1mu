@@ -1,12 +1,27 @@
 #include <QApplication>
 #include "b1mainwindow.h"
 
+#include <iostream>
+#include <cstdlib>
+
 int main(int argc, char **argv) 
 {
-    QApplication app(argc, argv);
-    
-    b1MainWindow wnd;
-    wnd.show();
-    
-    return app.exec();
+    int rv;
+    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
+    {
+        std::cout << "Usage: " << argv[0] << " [<iNES-ROM-file>]" << std::endl;
+
+        rv = EXIT_SUCCESS;
+    }
+    else
+    {
+        QApplication app(argc, argv);
+
+        b1MainWindow wnd;
+        wnd.show();
+
+        rv = app.exec();
+    }
+
+    return rv;
 }

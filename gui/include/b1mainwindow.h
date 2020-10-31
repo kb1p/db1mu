@@ -55,6 +55,7 @@ protected:
     void keyPressEvent(QKeyEvent *e) override;
     void keyReleaseEvent(QKeyEvent *e) override;
 
+    void loadROM(const QString &romName);
     void updateUI();
 
 protected Q_SLOTS:

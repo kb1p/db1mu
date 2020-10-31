@@ -126,6 +126,10 @@ b1MainWindow::b1MainWindow()
                      [this](int) { m_ui->actionShowPPU->setChecked(false); });
 
     setFocusPolicy(Qt::StrongFocus);
+
+    const auto args = QCoreApplication::arguments();
+    if (args.size() > 1)
+        loadROM(args[1]);
 }
 
 b1MainWindow::~b1MainWindow()
@@ -150,6 +154,27 @@ void b1MainWindow::closeEvent(QCloseEvent *e)
     }
 }
 
+void b1MainWindow::loadROM(const QString &romName)
+{
+    if (m_screen->isRunning())
+        m_screen->pause();
+
+    ROMLoader loader { m_eng->cartridge };
+    try
+    {
+        loader.loadNES(romName.toLocal8Bit().data());
+        m_eng->bus.injectCartrige(&m_eng->cartridge);
+        m_screen->resume();
+    }
+    catch (const Exception &ex)
+    {
+        QMessageBox::critical(this,
+                                tr("Cannot load ROM"),
+                                tr("Error: %1").arg(ex.message()));
+    }
+    updateUI();
+}
+
 void b1MainWindow::openROM()
 {
     const auto fn = QFileDialog::getOpenFileName(this,
@@ -157,25 +182,7 @@ void b1MainWindow::openROM()
                                                  tr("."),
                                                  tr("NES ROM images (*.nes)"));
     if (!fn.isNull())
-    {
-        if (m_screen->isRunning())
-            m_screen->pause();
-
-        ROMLoader loader { m_eng->cartridge };
-        try
-        {
-            loader.loadNES(fn.toLocal8Bit().data());
-            m_eng->bus.injectCartrige(&m_eng->cartridge);
-            m_screen->resume();
-        }
-        catch (const Exception &ex)
-        {
-            QMessageBox::critical(this,
-                                  tr("Cannot load ROM"),
-                                  tr("Error: %1").arg(ex.message()));
-        }
-        updateUI();
-    }
+        loadROM(fn);
 }
 
 void b1MainWindow::pauseEmulation()
