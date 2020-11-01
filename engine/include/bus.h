@@ -87,6 +87,8 @@ public:
         return m_pCart;
     }
 
+    void triggerNMI() noexcept;
+
     void runFrame();
 
     int currentFrame() const noexcept

@@ -17,6 +17,7 @@ void Bus::injectCartrige(Cartrige *cart)
     m_vram.Clear();
     m_spriteMem.Clear();
 
+    m_pPPU->reset();
     m_pCPU->reset();
 
     m_nFrame = 0;
@@ -41,6 +42,15 @@ void Bus::setGamePad(int n, Gamepad *pad) noexcept
     assert(n >= 0 && n < 2);
     m_pGamePads[n] = pad;
     pad->setBus(this);
+}
+
+void Bus::triggerNMI() noexcept
+{
+    // Sending of NMI signal from PPU to CPU takes 7 clocks.
+    // At this time CPU is still running and VBLANK flag is
+    // already set.
+    m_pCPU->run(7);
+    m_pCPU->NMI();
 }
 
 static constexpr int PAL_FPS = 50,
@@ -72,13 +82,7 @@ void Bus::runFrame()
     m_pPPU->onBeginVblank();
 
     if (m_pPPU->isNMIEnabled())
-    {
-        // Sending of NMI signal from PPU to CPU takes 7 clocks.
-        // At this time CPU is still running and VBLANK flag is
-        // already set.
-        m_pCPU->run(7);
-        m_pCPU->NMI();
-    }
+        triggerNMI();
 
     // PPU is opened for writinng only during VSYNC
     for (int i = 0; i < NMI_LINES; i++)

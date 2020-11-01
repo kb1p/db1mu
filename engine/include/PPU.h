@@ -102,6 +102,11 @@ public:
     void drawNextLine() noexcept;
     void endFrame() noexcept;
 
+    void reset() noexcept
+    {
+        m_st = { };
+    }
+
     const State &currentState() const noexcept
     {
         return m_st;

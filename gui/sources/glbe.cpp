@@ -76,6 +76,8 @@ void GLRenderingBackend::init(QOpenGLFunctions *glFunctions)
         if ((feats & f) == 0)
             throw Exception { Exception::IllegalOperation, "required OpenGL features are not supported" };
 
+    memset(m_texData, 0, TEX_WIDTH * TEX_HEIGHT * 4);
+
     // Prepare FBO and texture for intermediate rendering
     m_gl->glGenTextures(1, &m_tex);
     if (m_tex == 0)
