@@ -28,8 +28,11 @@ class Bus
     // 0x0000 ~ 0x0100 is a z-page, have special meaning for addressing.
     Storage<0x800> m_ram;
 
-    // Video memory, separate address space
-    Storage<0x2000> m_vram;
+    // Video memory: nametables
+    Storage<0x1000> m_vramNS;
+
+    // Video memory: palettes
+    Storage<0x20> m_vramPal;
 
     // Cartridge permanent RAM
     Storage<0x2000> m_wram;

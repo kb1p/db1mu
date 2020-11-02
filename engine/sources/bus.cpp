@@ -14,7 +14,8 @@ void Bus::injectCartrige(Cartrige *cart)
 
     // Clear memory
     m_ram.Clear();
-    m_vram.Clear();
+    m_vramNS.Clear();
+    m_vramPal.Clear();
     m_spriteMem.Clear();
 
     m_pPPU->reset();
@@ -184,62 +185,53 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
 
 c6502_byte_t Bus::readVideoMem(c6502_word_t addr) const noexcept
 {
-    if (addr < 0x2000u)
-    {
-        if (m_pCart->mapper()->hasRAM())
-            return m_pCart->mapper()->readRAM(addr);
-        else
-            return m_pCart->mapper()->readVROM(addr);
-    }
+    c6502_byte_t v;
+    if (addr >= 0x3F00u)
+        v = m_vramPal.Read(addr & 0x1Fu);
+    else if (addr >= 0x2000u)
+        v = m_vramNS.Read(addr & 0xFFFu);
+    else if (m_pCart->mapper()->hasRAM())
+        v = m_pCart->mapper()->readRAM(addr);
     else
-        return m_vram.Read(addr - 0x2000u);
+        v = m_pCart->mapper()->readVROM(addr);
+
+    return v;
 }
 
 void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
 {
     const auto mt = m_pCart->mirroring();
 
-    if (addr < 0x2000u)
+    if (addr >= 0x3F00u)
+    {
+        addr &= 0x1Fu;
+        m_vramPal.Write(addr, val);
+        if ((addr & 0x3u) == 0u)
+            m_vramPal.Write(addr ^ 0x10u, val);
+    }
+    else if (addr >= 0x2000u)
+    {
+        addr &= 0xFFFu;
+        m_vramNS.Write(addr, val);
+        switch (mt)
+        {
+            case Mirroring::Horizontal:
+                m_vramNS.Write(addr ^ 0x400u, val);
+                break;
+            case Mirroring::Vertical:
+                m_vramNS.Write(addr ^ 0x800u, val);
+            case Mirroring::FourScreen:
+                break;
+        }
+    }
+    else
     {
         assert(m_pCart->mapper()->hasRAM());
         m_pCart->mapper()->writeRAM(addr, val);
     }
-    else
-    {
-        constexpr auto PBG = PAL_BG - 0x2000u,
-                       PSPR = PAL_SPR - 0x2000u;
-        addr -= 0x2000u;
-        if (addr < 0x1000u && mt != Mirroring::FourScreen)
-        {
-            // Page mirroring
-            constexpr c6502_word_t MAP_V[] = { 2, 3, 0, 1 },
-                                   MAP_H[] = { 1, 0, 3, 2 };
-
-            auto pn = addr / 0x400u;
-            switch (mt)
-            {
-                case Mirroring::Horizontal:
-                    pn = MAP_H[pn];
-                    break;
-                case Mirroring::Vertical:
-                    pn = MAP_V[pn];
-                    break;
-                default:
-                    assert(false && "unexpected mirroring type");
-            }
-            m_vram.Write(pn * 0x400u + addr % 0x400u, val);
-        }
-        // Palette mirroring
-        else if (addr >= PBG && addr < PBG + 16 && addr % 4 == 0)
-            m_vram.Write(PSPR + (addr - PBG), val);
-        else if (addr >= PSPR && addr < PSPR + 16 && addr % 4 == 0)
-            m_vram.Write(PBG + (addr - PSPR), val);
-
-        m_vram.Write(addr, val);
-    }
 }
 
-static const char MAGIC[] = { 'D', 'B', '1', 'M', 'U', 'S', 'S', 0u, 0u, 0u };
+static const char MAGIC[] = { 'D', 'B', '1', 'M', 'U', 'S', 'S', 'v', '1', 0u };
 
 /* Binary state format (to be revised):
  * 0000: MAGIC (10 bytes)
@@ -269,7 +261,8 @@ void Bus::saveState(const char *fileName)
     // Dump memory
     m_ram.Save(fout);
     m_spriteMem.Save(fout);
-    m_vram.Save(fout);
+    m_vramNS.Save(fout);
+    m_vramPal.Save(fout);
     m_wram.Save(fout);
 
     // TODO: add mapper state
@@ -295,7 +288,8 @@ void Bus::loadState(const char *fileName)
     // Read memory
     m_ram.Load(fin);
     m_spriteMem.Load(fin);
-    m_vram.Load(fin);
+    m_vramNS.Load(fin);
+    m_vramPal.Load(fin);
     m_wram.Load(fin);
 
     // TODO: add mapper state
