@@ -4,10 +4,10 @@
 #include <QDebug>
 
 static const auto *VS_SRC =
-#include "../shaders/glbe_vert.glsl"
+#include "../../shaders/glbe_vert.glsl"
 
 static const auto *FS_SRC =
-#include "../shaders/glbe_frag.glsl"
+#include "../../shaders/glbe_frag.glsl"
 
 enum Attributes: GLuint
 {

@@ -4,7 +4,7 @@ find_package(Qt5 REQUIRED Widgets)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories("include"
-                    "../engine/include")
+                    "../../engine/include")
 
 file(GLOB sources "sources/*.cpp")
 file(GLOB forms "forms/*.ui")

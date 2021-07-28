@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.1)
 project(b1mulator)
 
 option(BUILD_DEBUGGER "Build command line-based debugger" OFF)
+set(FRONTEND_TYPE "QT" CACHE STRING "Which frontend to use [QT]")
 
 include_directories("engine/include")
 
@@ -15,5 +16,11 @@ if(BUILD_DEBUGGER)
     add_subdirectory("bin")
 endif()
 
-add_subdirectory("gui")
+if(FRONTEND_TYPE STREQUAL "QT")
+    message(">>> Building with Qt5 frontend")
+    add_subdirectory("gui/qt5")
+elseif(NOT FRONTEND_TYPE STREQUAL "NONE")
+    message(SEND_ERROR "Unknown frontend specified: ${FRONTEND_TYPE}")
+endif()
+
 file(COPY "test/raw.data" DESTINATION "${CMAKE_BINARY_DIR}/bin")

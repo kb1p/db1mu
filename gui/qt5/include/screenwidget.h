@@ -2,7 +2,7 @@
 #define SCREENWIDGET_H
 
 #include <QOpenGLWidget>
-#include <QTime>
+#include <QElapsedTimer>
 
 class Bus;
 class GLRenderingBackend;
@@ -47,7 +47,7 @@ private:
     GLRenderingBackend *m_pRBE = nullptr;
     bool m_runEmulation = false;
 
-    QTime m_clocks;
+    QElapsedTimer m_clocks;
     int m_accFrameTimes = 0,
         m_nFrames = 0;
 };
