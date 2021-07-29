@@ -3,15 +3,18 @@
 
 #include <QOpenGLWidget>
 #include <QElapsedTimer>
+#include <QOpenGLFunctions>
+#include "glbe.h"
 
 class Bus;
-class GLRenderingBackend;
 
 class ScreenWidget: public QOpenGLWidget
 {
     Q_OBJECT
 
 public:
+    using Backend = GLRenderingBackend<QOpenGLFunctions>;
+
     ScreenWidget(QWidget *parent = nullptr);
     ~ScreenWidget();
 
@@ -27,7 +30,7 @@ public:
 
     bool isRunning() const noexcept;
 
-    GLRenderingBackend *getRenderingBackend() const noexcept
+    Backend *getRenderingBackend() const noexcept
     {
         return m_pRBE;
     }
@@ -44,7 +47,7 @@ protected:
 private:
     Bus *m_pBus = nullptr;
     int m_timerId = 0;
-    GLRenderingBackend *m_pRBE = nullptr;
+    Backend *m_pRBE = nullptr;
     bool m_runEmulation = false;
 
     QElapsedTimer m_clocks;

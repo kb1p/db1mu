@@ -1,8 +1,6 @@
 #include "screenwidget.h"
-#include "glbe.h"
 
 #include <QOpenGLContext>
-#include <QOpenGLFunctions>
 #include <QSurfaceFormat>
 #include <QMessageBox>
 #include <QTimerEvent>
@@ -25,7 +23,7 @@ ScreenWidget::ScreenWidget(QWidget *parent):
     setFormat(fmt);
     //setUpdateBehavior(QOpenGLWidget::PartialUpdate);
 
-    m_pRBE = new GLRenderingBackend;
+    m_pRBE = new Backend;
 }
 
 ScreenWidget::~ScreenWidget()
@@ -67,7 +65,17 @@ void ScreenWidget::initializeGL()
 {
     try
     {
-        m_pRBE->init(context()->functions());
+        const static auto reqFeatures = {
+            QOpenGLFunctions::Shaders
+        };
+
+        const auto glFuncs = context()->functions();
+        const auto feats = glFuncs->openGLFeatures();
+        for (auto f: reqFeatures)
+            if ((feats & f) == 0)
+                throw Exception { Exception::IllegalOperation, "required OpenGL features are not supported" };
+
+        m_pRBE->init(glFuncs);
     }
     catch (Exception &ex)
     {

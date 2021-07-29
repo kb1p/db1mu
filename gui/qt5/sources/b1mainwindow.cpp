@@ -28,7 +28,6 @@
 
 #include "b1mainwindow.h"
 #include "ui_b1mainwindow.h"
-#include "glbe.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
