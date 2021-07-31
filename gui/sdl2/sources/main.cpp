@@ -1,11 +1,13 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengles2.h>
+#include "mainwindow.h"
 #include <iostream>
 
 int main(int argc, char **argv)
 {
     try
     {
+        if (argc < 2)
+            throw "ROM file name to load was not provided";
+
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
             throw "SDL initialization failed";
 
@@ -30,8 +32,10 @@ int main(int argc, char **argv)
         if (SDL_GL_SetSwapInterval(1) < 0)
             throw "failed to set VSync interval";
 
+        MainWindow emuWin;
+
         // Rendering state setup
-        glClearColor(0.5, 0.5, 0.0, 1.0);
+        emuWin.initialize(argv[1]);
 
         bool runLoop = true;
         while (runLoop)
@@ -41,10 +45,12 @@ int main(int argc, char **argv)
             {
                 if (evt.type == SDL_QUIT)
                     runLoop = false;
+                else
+                    emuWin.handleEvent(evt);
             }
 
-            // Render scene
-            glClear(GL_COLOR_BUFFER_BIT);
+            // Update emulator state and render scene with GL
+            emuWin.update();
 
             SDL_GL_SwapWindow(win);
         }

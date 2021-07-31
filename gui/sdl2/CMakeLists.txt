@@ -6,6 +6,7 @@ find_library(GLES_LIBS NAMES "GLESv2" "libGLESv2")
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories("include"
+                    "../common/include"
                     "../../engine/include"
                     ${SDL2_INCLUDE_DIRS})
 

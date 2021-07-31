@@ -2,6 +2,7 @@
 #define GL_BE_H
 
 #include <PPU.h>
+#include <log.h>
 #include <cstdint>
 #include <cassert>
 
@@ -110,6 +111,11 @@ public:
 };
 
 template <typename IGL>
+const int GLRenderingBackend<IGL>::TEX_WIDTH;
+template <typename IGL>
+const int GLRenderingBackend<IGL>::TEX_HEIGHT;
+
+template <typename IGL>
 void GLRenderingBackend<IGL>::init(IGL *glFunctions)
 {
     m_gl = glFunctions;
@@ -154,7 +160,7 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
     if (status != GL_TRUE)
     {
         m_gl->glGetShaderInfoLog(vs, 1024, nullptr, infoLog);
-        //qDebug() << infoLog;
+        Log::e("Vertex shader compilation failure: %s", infoLog);
         assert(false);
     }
 
@@ -165,7 +171,7 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
     if (status != GL_TRUE)
     {
         m_gl->glGetShaderInfoLog(fs, 1024, nullptr, infoLog);
-        //qDebug() << infoLog;
+        Log::e("Fragment shader compilation failure: %s", infoLog);
         assert(false);
     }
 
@@ -177,7 +183,7 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
     if (status != GL_TRUE)
     {
         m_gl->glGetProgramInfoLog(m_shdr, 1024, nullptr, infoLog);
-        //qDebug() << infoLog;
+        Log::e("Shader program linking failure: %s", infoLog);
         assert(false);
     }
 
@@ -203,7 +209,7 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
 
     m_gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     m_gl->glEnableVertexAttribArray(ATTR_OFFSET);
-    m_gl->glVertexAttribPointer(ATTR_OFFSET, 2, GL_FLOAT, GL_TRUE, 0, 0);
+    m_gl->glVertexAttribPointer(ATTR_OFFSET, 2, GL_FLOAT, GL_TRUE, 0, nullptr);
 
     m_gl->glActiveTexture(GL_TEXTURE0);
 
