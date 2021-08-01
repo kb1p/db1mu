@@ -1,4 +1,4 @@
-R"(
+R"(#version 100
 attribute vec2 aOffset;
 
 varying vec2 vTexCoord;

@@ -24,8 +24,10 @@ Options parseArguments(int argc, char *argv[])
             throw "unrecognized command line option";
     }
 
+#ifndef USE_IMGUI
     if (opts.romFileName == nullptr)
         throw "ROM file name to load was not provided";
+#endif
 
     return opts;
 }
@@ -63,27 +65,31 @@ int main(int argc, char *argv[])
         if (SDL_GL_SetSwapInterval(1) < 0)
             throw "failed to set VSync interval";
 
-        MainWindow emuWin;
-
-        // Rendering state setup
-        emuWin.initialize(opts.romFileName);
-
-        bool runLoop = true;
-        while (runLoop)
         {
-            SDL_Event evt;
-            while (SDL_PollEvent(&evt) != 0)
+            MainWindow emuWin { win, glCtx };
+
+            // Rendering state setup
+            emuWin.initialize();
+            if (opts.romFileName)
+                emuWin.loadROM(opts.romFileName);
+
+            bool runLoop = true;
+            while (runLoop)
             {
-                if (evt.type == SDL_QUIT)
-                    runLoop = false;
-                else
-                    emuWin.handleEvent(evt);
+                SDL_Event evt;
+                while (SDL_PollEvent(&evt) != 0)
+                {
+                    if (evt.type == SDL_QUIT)
+                        runLoop = false;
+                    else
+                        emuWin.handleEvent(evt);
+                }
+
+                // Update emulator state and render scene with GL
+                emuWin.update();
+
+                SDL_GL_SwapWindow(win);
             }
-
-            // Update emulator state and render scene with GL
-            emuWin.update();
-
-            SDL_GL_SwapWindow(win);
         }
 
         SDL_GL_DeleteContext(glCtx);

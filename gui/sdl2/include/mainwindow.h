@@ -22,6 +22,7 @@ class MainWindow
 
     using RenderingBackend = GLRenderingBackend<GLFunctionsWrapper>;
 
+    SDL_Window *m_sdlWin = nullptr;
     std::unique_ptr<Bus> m_bus;
     std::unique_ptr<CPU6502> m_cpu;
     std::unique_ptr<PPU> m_ppu;
@@ -56,8 +57,13 @@ class MainWindow
          { SDL_SCANCODE_PAGEDOWN, Button::B,      false }
      };
 
+     void handleUI();
+
 public:
-    void initialize(const char *romFileName);
+    MainWindow(SDL_Window *win, SDL_GLContext glCtx);
+    ~MainWindow();
+    void initialize();
+    void loadROM(const char *romFileName);
     void update();
     void handleEvent(const SDL_Event &evt);
 };

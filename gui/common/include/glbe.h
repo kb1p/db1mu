@@ -24,6 +24,8 @@ class GLRenderingBackend: public PPU::RenderingBackend
     GLint m_uPos = 0,
           m_uSpriteData = 0,
           m_uTexture = 0;
+    int m_vpWidth = 0,
+        m_vpHeight = 0;
 
     // NES to RGB
     GLint m_palette[64] = {
@@ -207,20 +209,13 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
     m_gl->glUseProgram(m_shdr);
     m_uTexture = m_gl->glGetUniformLocation(m_shdr, "uTexture");
     assert(m_uTexture > -1);
-
-    m_gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    m_gl->glEnableVertexAttribArray(ATTR_OFFSET);
-    m_gl->glVertexAttribPointer(ATTR_OFFSET, 2, GL_FLOAT, GL_TRUE, 0, nullptr);
-
-    m_gl->glActiveTexture(GL_TEXTURE0);
-
-    m_gl->glClearColor(1, 0, 0, 1);
 }
 
 template <typename IGL>
 void GLRenderingBackend<IGL>::resize(int w, int h)
 {
-    m_gl->glViewport(0, 0, w, h);
+    m_vpWidth = w;
+    m_vpHeight = h;
 }
 
 template <typename IGL>
@@ -259,16 +254,22 @@ void GLRenderingBackend<IGL>::setLine(const int n,
 template <typename IGL>
 void GLRenderingBackend<IGL>::draw()
 {
+    m_gl->glClearColor(1, 0, 0, 1);
     m_gl->glClear(GL_COLOR_BUFFER_BIT);
 
     // Upload texture data
+    m_gl->glActiveTexture(GL_TEXTURE0);
     m_gl->glBindTexture(GL_TEXTURE_2D, m_tex);
     m_gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_texData);
 
     // Render FBO contents to screen with scaling
+    m_gl->glViewport(0, 0, m_vpWidth, m_vpHeight);
     m_gl->glUseProgram(m_shdr);
     m_gl->glUniform1i(m_uTexture, 0);
 
+    m_gl->glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    m_gl->glEnableVertexAttribArray(ATTR_OFFSET);
+    m_gl->glVertexAttribPointer(ATTR_OFFSET, 2, GL_FLOAT, GL_TRUE, 0, nullptr);
     m_gl->glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     m_gl->glBindTexture(GL_TEXTURE_2D, 0);
 }

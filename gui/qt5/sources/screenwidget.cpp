@@ -87,6 +87,7 @@ void ScreenWidget::initializeGL()
 
 void ScreenWidget::resizeGL(int w, int h)
 {
+    m_pRBE->resize(w, h);
 }
 
 void ScreenWidget::timerEvent(QTimerEvent *event)

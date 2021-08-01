@@ -1,5 +1,7 @@
 project(gb1mulator)
 
+option(USE_IMGUI "Use third-party ImGui library (with file dialogs addon) to provide UI" ON)
+
 find_package(SDL2 REQUIRED)
 
 find_library(GLES_LIBS NAMES "GLESv2" "libGLESv2")
@@ -12,6 +14,21 @@ include_directories("include"
 
 file(GLOB sources "sources/*.cpp")
 file(GLOB headers "include/*.h")
+
+if(USE_IMGUI)
+    add_definitions(-DUSE_IMGUI -DIMGUI_IMPL_OPENGL_ES2)
+    include_directories("third_party/imgui"
+                        "third_party/imgui/backends"
+                        "third_party/imgui/addons")
+    file(GLOB imgui_src "third_party/imgui/*.cpp")
+    list(APPEND sources ${imgui_src})
+    list(APPEND sources "third_party/imgui/backends/imgui_impl_opengl3.cpp"
+                        "third_party/imgui/backends/imgui_impl_sdl.cpp"
+                        "third_party/imgui/addons/imguifilesystem/imguifilesystem.cpp")
+    message(">>> Using ImGui")
+endif()
+
+message(">>> Frontend sources: ${sources}")
 
 add_executable(b1mulator ${sources})
 
