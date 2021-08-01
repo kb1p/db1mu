@@ -55,31 +55,41 @@ void MainWindow::update()
 
 void MainWindow::handleEvent(const SDL_Event &evt)
 {
-    if (evt.type == SDL_KEYUP || evt.type == SDL_KEYDOWN)
+    switch (evt.type)
     {
-        const auto key = evt.key.keysym.scancode;
-        const bool pressed = evt.key.state == SDL_PRESSED;
-        auto i = std::find_if(std::begin(m_keyMapLeft),
-                              std::end(m_keyMapLeft),
-                              [key](const KeyMap &x)
-        {
-            return x.sdlKey == key;
-        });
-
-        if (i != std::end(m_keyMapLeft))
-            m_padLeft->buttonEvent(i->padKey, pressed, i->turbo, false);
-        else
-        {
-            // Pad 2?
-            i = std::find_if(std::begin(m_keyMapRight),
-                             std::end(m_keyMapRight),
-                             [key](const KeyMap &x)
+        case SDL_KEYUP:
+        case SDL_KEYDOWN:
             {
-                return x.sdlKey == key;
-            });
+                const auto key = evt.key.keysym.scancode;
+                const bool pressed = evt.key.state == SDL_PRESSED;
+                auto i = std::find_if(std::begin(m_keyMapLeft),
+                                    std::end(m_keyMapLeft),
+                                    [key](const KeyMap &x)
+                {
+                    return x.sdlKey == key;
+                });
 
-            if (i != std::end(m_keyMapRight))
-                m_padRight->buttonEvent(i->padKey, pressed, i->turbo, false);
-        }
+                if (i != std::end(m_keyMapLeft))
+                    m_padLeft->buttonEvent(i->padKey, pressed, i->turbo, false);
+                else
+                {
+                    // Pad 2?
+                    i = std::find_if(std::begin(m_keyMapRight),
+                                    std::end(m_keyMapRight),
+                                    [key](const KeyMap &x)
+                    {
+                        return x.sdlKey == key;
+                    });
+
+                    if (i != std::end(m_keyMapRight))
+                        m_padRight->buttonEvent(i->padKey, pressed, i->turbo, false);
+                }
+            }
+            break;
+        case SDL_WINDOWEVENT:
+            if (evt.window.event == SDL_WINDOWEVENT_RESIZED)
+            {
+                m_renderingBackend->resize(evt.window.data1, evt.window.data2);
+            }
     }
 }

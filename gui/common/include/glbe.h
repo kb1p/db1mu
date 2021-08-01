@@ -102,6 +102,7 @@ public:
     }
 
     void init(IGL *glFunctions);
+    void resize(int w, int h);
     void release();
 
     void setLine(const int n,
@@ -214,6 +215,12 @@ void GLRenderingBackend<IGL>::init(IGL *glFunctions)
     m_gl->glActiveTexture(GL_TEXTURE0);
 
     m_gl->glClearColor(1, 0, 0, 1);
+}
+
+template <typename IGL>
+void GLRenderingBackend<IGL>::resize(int w, int h)
+{
+    m_gl->glViewport(0, 0, w, h);
 }
 
 template <typename IGL>

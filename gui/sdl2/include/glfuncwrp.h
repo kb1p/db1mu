@@ -48,6 +48,7 @@ struct GLFunctionsWrapper
     WRAP_VOID(glClear)
     WRAP_VOID(glUniform1i)
     WRAP_VOID(glDrawArrays)
+    WRAP_VOID(glViewport)
 
 #undef WRAP_RET
 #undef WRAP_FUNC
