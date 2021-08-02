@@ -72,7 +72,8 @@ void MainWindow::loadROM(const char *romFileName)
     }
     catch (const Exception &ex)
     {
-        Log::e("Failed to load ROM file: %s", ex.message());
+        m_error = std::string{ "Failed to load ROM file, " } + ex.message();
+        Log::e("%s", m_error.c_str());
     }
 }
 
@@ -88,7 +89,9 @@ void MainWindow::update()
         glClear(GL_COLOR_BUFFER_BIT);
     }
 
+#ifdef USE_IMGUI
     handleUI();
+#endif
 }
 
 void MainWindow::handleEvent(const SDL_Event &evt)
@@ -134,9 +137,9 @@ void MainWindow::handleEvent(const SDL_Event &evt)
     }
 }
 
+#ifdef USE_IMGUI
 void MainWindow::handleUI()
 {
-#ifdef USE_IMGUI
     // Draw ImGui stuff
     auto &imGuiIO = ImGui::GetIO();
     ImGui_ImplOpenGL3_NewFrame();
@@ -164,6 +167,24 @@ void MainWindow::handleUI()
     if (strlen(romPath) > 0)
         loadROM(romPath);
 
+    if (!m_error.empty())
+        ImGui::OpenPopup("Error");
+
+    if (ImGui::BeginPopupModal("Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("%s", m_error.c_str());
+        ImGui::Separator();
+
+        if (ImGui::Button("OK"))
+        {
+            m_error.clear();
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SetItemDefaultFocus();
+        ImGui::EndPopup();
+    }
+
     if (cmdQuit)
     {
         SDL_Event evt;
@@ -174,5 +195,5 @@ void MainWindow::handleUI()
     ImGui::Render();
     glViewport(0, 0, (int)imGuiIO.DisplaySize.x, (int)imGuiIO.DisplaySize.y);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
 }
+#endif

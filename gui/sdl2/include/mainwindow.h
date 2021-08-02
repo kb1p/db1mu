@@ -10,6 +10,7 @@
 #include <Cartridge.h>
 #include <SDL2/SDL.h>
 #include <memory>
+#include <string>
 
 class MainWindow
 {
@@ -57,7 +58,11 @@ class MainWindow
          { SDL_SCANCODE_PAGEDOWN, Button::B,      false }
      };
 
+     std::string m_error;
+
+#ifdef USE_IMGUI
      void handleUI();
+#endif
 
 public:
     MainWindow(SDL_Window *win, SDL_GLContext glCtx);
