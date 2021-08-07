@@ -38,3 +38,5 @@ message(">>> Frontend sources: ${sources}")
 add_executable(b1mulator ${sources})
 
 target_link_libraries(b1mulator b1-eng ${SDL2_LIBRARIES} ${GLES_LIBS})
+
+install(TARGETS b1mulator DESTINATION "bin")
