@@ -240,7 +240,7 @@ void GLRenderingBackend<IGL>::setLine(const int n,
     auto *pDest = m_texData + (TEX_HEIGHT - 1 - n) * TEX_WIDTH * 4;
     for (int i = 0; i < TEX_WIDTH; i++, pDest += 4)
     {
-        const auto c = pColorData[i] != PPU::TRANSPARENT ? (pColorData[i] & 0x3Fu) : bgColor;
+        const auto c = pColorData[i] != PPU::TRANSPARENT_PXL ? (pColorData[i] & 0x3Fu) : bgColor;
         assert(c < 64);
         const auto s = m_palette[c];
         constexpr unsigned b5m = 0b11111u;

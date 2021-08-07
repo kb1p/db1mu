@@ -30,19 +30,19 @@ void Log::print(Severity sl, const char *fmt, ...)
         const char *pSeverity = "???";
         switch (sl)
         {
-            case ERROR:
+            case LVL_ERROR:
                 pSeverity = "ERROR";
                 break;
-            case WARNING:
+            case LVL_WARNING:
                 pSeverity = "WARNING";
                 break;
-            case INFO:
+            case LVL_INFO:
                 pSeverity = "INFO";
                 break;
-            case DEBUG:
+            case LVL_DEBUG:
                 pSeverity = "DEBUG";
                 break;
-            case VERBOSE:
+            case LVL_VERBOSE:
                 pSeverity = "VERBOSE";
         }
         *m_config.pOutput << pSeverity << m_config.fieldSep;

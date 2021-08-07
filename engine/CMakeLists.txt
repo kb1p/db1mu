@@ -33,7 +33,7 @@ if(BUILD_DEBUGGER)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-add_library(b1-eng SHARED ${sources})
+add_library(b1-eng STATIC ${sources})
 
 if(BUILD_DEBUGGER)
     target_link_libraries(b1-eng l pthread)

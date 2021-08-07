@@ -15,6 +15,8 @@ int main(int argc, char **argv)
     }
     else
     {
+        QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
+
         QApplication app(argc, argv);
 
         b1MainWindow wnd;

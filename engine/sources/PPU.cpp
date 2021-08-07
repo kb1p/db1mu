@@ -240,7 +240,7 @@ void PPU::drawNextLine() noexcept
     c6502_byte_t lnData[LINE_WIDTH];
 
     // Fill with background color
-    memset(lnData, TRANSPARENT, LINE_WIDTH);
+    memset(lnData, TRANSPARENT_PXL, LINE_WIDTH);
 
     // If PPU is turned off, writing to VRAM is possible
     const bool enableRendering = m_st.backgroundVisible || m_st.spritesVisible;
@@ -338,13 +338,13 @@ void PPU::drawNextLine() noexcept
                     assert(x + fineX <= 256 + 8);
                     auto &bp = lnData[x + fineX + i],
                         &sp = sprLnData[i];
-                    if (sp != TRANSPARENT)
+                    if (sp != TRANSPARENT_PXL)
                     {
                         // Sprite 0 hit test
-                        if (ns == 0 && bp != TRANSPARENT && x < 255u)
+                        if (ns == 0 && bp != TRANSPARENT_PXL && x < 255u)
                             m_st.sprite0 = true;
 
-                        if (!behindBg || bp == TRANSPARENT)
+                        if (!behindBg || bp == TRANSPARENT_PXL)
                             bp = sp;
                     }
                 }
@@ -401,7 +401,7 @@ void PPU::expandColor(c6502_byte_t *p,
     // Combine color values
     clrHi <<= 2;
     for (int i = 0; i < 8; i++, p++)
-        *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : TRANSPARENT;
+        *p = *p > 0 ? bus().readVideoMem(palAddr + (*p | clrHi)) : TRANSPARENT_PXL;
 }
 
 void writeBool(std::ostream &out, bool v)
