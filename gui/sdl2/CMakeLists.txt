@@ -4,19 +4,24 @@ option(USE_IMGUI "Use third-party ImGui library (with file dialogs addon) to pro
 
 find_package(SDL2 REQUIRED)
 
-find_library(GLES_LIBS NAMES "GLESv2" "libGLESv2")
+set(GLES_HDR_PATH "$ENV{KHRONOS_HEADERS}" CACHE STRING "Additional directory to search for GLES header files")
+set(GLES_LIB_PATH "$ENV{OPENGLES_LIBDIR}" CACHE STRING "Additional directory to search for GLES libraries")
+
+find_library(GLES_LIBS NAMES "GLESv2" "GLESv3" HINTS ${GLES_LIB_PATH})
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories("include"
                     "../common/include"
                     "../../engine/include"
-                    ${SDL2_INCLUDE_DIRS})
+                    ${SDL2_INCLUDE_DIRS}
+                    "${SDL2_INCLUDE_DIRS}/SDL2"
+                    ${GLES_HDR_PATH})
 
 file(GLOB sources "sources/*.cpp")
 file(GLOB headers "include/*.h")
 
 if(USE_IMGUI)
-    add_definitions(-DUSE_IMGUI -DIMGUI_IMPL_OPENGL_ES2)
+    add_definitions(-DUSE_IMGUI -DIMGUI_IMPL_OPENGL_ES2 -DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
     include_directories("third_party/imgui"
                         "third_party/imgui/backends"
                         "third_party/imgui/addons")

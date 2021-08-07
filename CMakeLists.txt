@@ -8,7 +8,7 @@ set(FRONTEND_TYPE "QT" CACHE STRING "Which frontend to use [QT]")
 include_directories("engine/include")
 
 set(CMAKE_CXX_STANDARD 11)
-add_compile_options(-Wall -Werror -Wl,--no-undefined)
+#add_compile_options(-Wall -Werror -Wl,--no-undefined)
 
 add_subdirectory("engine")
 

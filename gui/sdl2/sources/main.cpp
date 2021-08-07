@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include <iostream>
 
 struct Options
 {
@@ -34,6 +33,9 @@ Options parseArguments(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+    int rc = 0;
+    SDL_Window *win = { };
+    SDL_GLContext glCtx = { };
     try
     {
         auto opts = parseArguments(argc - 1, argv + 1);
@@ -46,24 +48,23 @@ int main(int argc, char *argv[])
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-        auto win = SDL_CreateWindow("db1mu",
-                                    SDL_WINDOWPOS_UNDEFINED,
-                                    SDL_WINDOWPOS_UNDEFINED,
-                                    640,
-                                    480,
-                                    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        win = SDL_CreateWindow("db1mu",
+                               SDL_WINDOWPOS_UNDEFINED,
+                               SDL_WINDOWPOS_UNDEFINED,
+                               640,
+                               480,
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         if (!win)
             throw "failed to create SDL window";
 
         if (opts.fullScreen)
             SDL_SetWindowFullscreen(win, SDL_WINDOW_FULLSCREEN);
 
-        auto glCtx = SDL_GL_CreateContext(win);
+        glCtx = SDL_GL_CreateContext(win);
         if (!glCtx)
             throw "failed to create GLES context";
 
-        if (SDL_GL_SetSwapInterval(1) < 0)
-            throw "failed to set VSync interval";
+        const bool manualDelay = SDL_GL_SetSwapInterval(1) < 0;
 
         {
             MainWindow emuWin { win, glCtx };
@@ -76,6 +77,7 @@ int main(int argc, char *argv[])
             bool runLoop = true;
             while (runLoop)
             {
+                const auto t0 = SDL_GetTicks();
                 SDL_Event evt;
                 while (SDL_PollEvent(&evt) != 0)
                 {
@@ -89,18 +91,28 @@ int main(int argc, char *argv[])
                 emuWin.update();
 
                 SDL_GL_SwapWindow(win);
+                const auto dt = SDL_GetTicks() - t0;
+                if (manualDelay && dt < 16)
+                    SDL_Delay(16 - dt);
             }
         }
-
-        SDL_GL_DeleteContext(glCtx);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
     }
     catch (const char *msg)
     {
-        std::cerr << "*** Error: " << msg << std::endl;
-        return 1;
+        std::string fullMsg = "Initialization error: ";
+        fullMsg += msg;
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                 "Error",
+                                 fullMsg.c_str(),
+                                 win);
+        rc = 1;
     }
 
-    return 0;
+    if (glCtx)
+        SDL_GL_DeleteContext(glCtx);
+    if (win)
+        SDL_DestroyWindow(win);
+    SDL_Quit();
+
+    return rc;
 }
