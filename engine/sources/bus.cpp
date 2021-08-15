@@ -1,6 +1,7 @@
 #include "bus.h"
 #include "cpu6502.h"
 #include "PPU.h"
+#include "APU.h"
 #include "Cartridge.h"
 #include "gamepad.h"
 #include "log.h"
@@ -100,33 +101,42 @@ int Bus::currentTimeMs() const noexcept
 // Memory request dispatching functions
 c6502_byte_t Bus::readMem(c6502_word_t addr)
 {
+    c6502_byte_t rv = 0;
     switch (addr >> 13)
     {
         case 0:
-            return m_ram.Read(addr & 0x7FFu);
+            rv = m_ram.Read(addr & 0x7FFu);
+            break;
         case 1:
             // PPU
             assert(m_pPPU != nullptr);
-            return m_pPPU->readRegister(addr & 0x0Fu);
+            rv = m_pPPU->readRegister(addr & 0x0Fu);
+            break;
         case 2:
             switch (addr)
             {
                 case 0x4016u:
-                    return m_pGamePads[0] ? m_pGamePads[0]->readRegister() : 0u;
+                    rv = m_pGamePads[0] ? m_pGamePads[0]->readRegister() : 0u;
+                    break;
                 case 0x4017u:
-                    return m_pGamePads[1] ? m_pGamePads[1]->readRegister() : 0u;
-                default:
-                    // APU
-                    //assert(false && "APU is not yet implemented");
-                    //break;
-                    return 0;
+                    rv = m_pGamePads[1] ? m_pGamePads[1]->readRegister() : 0u;
+                    break;
+                /*default:
+                    assert(m_pAPU != nullptr);
+                    rv = m_pAPU->readRegister(addr & 0x0Fu);
+                    break;*/
             }
+            break;
         case 3:
-            return m_wram.Read(addr & 0x1FFFu);
+            rv = m_wram.Read(addr & 0x1FFFu);
+            break;
         default:
             // Read from the cartridge
-            return m_pCart->mapper()->readROM(addr);
+            rv = m_pCart->mapper()->readROM(addr);
+            break;
     }
+
+    return rv;
 }
 
 void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
@@ -169,9 +179,9 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
 
                     break;
                 }
-                //default:
-                    // To APU registers
-                    //assert(false && "APU is not yet implemented");
+                /*default:
+                    assert(m_pAPU != nullptr);
+                    m_pAPU->writeRegister(addr & 0x0Fu, val);*/
             }
             break;
         case 3:

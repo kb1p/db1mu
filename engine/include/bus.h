@@ -5,6 +5,7 @@
 
 class CPU6502;
 class PPU;
+class APU;
 class Cartrige;
 class Gamepad;
 
@@ -43,6 +44,7 @@ class Bus
     // Modules
     CPU6502 *m_pCPU = nullptr;
     PPU *m_pPPU = nullptr;
+    APU *m_pAPU = nullptr;
     Cartrige *m_pCart = nullptr;
     Gamepad *m_pGamePads[2] = { };
 
