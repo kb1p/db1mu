@@ -7,7 +7,7 @@
 #include <cassert>
 
 template <typename IGL>
-class GLRenderingBackend: public PPU::RenderingBackend
+class GLRenderingBackend: public RenderingBackend
 {
     static constexpr int TEX_WIDTH = 256,
                          TEX_HEIGHT = 240;

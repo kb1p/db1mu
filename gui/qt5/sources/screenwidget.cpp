@@ -7,6 +7,9 @@
 #include <QDebug>
 
 #include <bus.h>
+#include "glbe.h"
+
+using Backend = GLRenderingBackend<QOpenGLFunctions>;
 
 ScreenWidget::ScreenWidget(QWidget *parent):
     QOpenGLWidget { parent }
@@ -23,12 +26,11 @@ ScreenWidget::ScreenWidget(QWidget *parent):
     setFormat(fmt);
     //setUpdateBehavior(QOpenGLWidget::PartialUpdate);
 
-    m_pRBE = new Backend;
+    m_RBE.reset(new Backend);
 }
 
 ScreenWidget::~ScreenWidget()
 {
-    delete m_pRBE;
 }
 
 bool ScreenWidget::isRunning() const noexcept
@@ -75,7 +77,7 @@ void ScreenWidget::initializeGL()
             if ((feats & f) == 0)
                 throw Exception { Exception::IllegalOperation, "required OpenGL features are not supported" };
 
-        m_pRBE->init(glFuncs);
+        static_cast<Backend*>(m_RBE.get())->init(glFuncs);
     }
     catch (Exception &ex)
     {
@@ -87,7 +89,7 @@ void ScreenWidget::initializeGL()
 
 void ScreenWidget::resizeGL(int w, int h)
 {
-    m_pRBE->resize(w, h);
+    static_cast<Backend*>(m_RBE.get())->resize(w, h);
 }
 
 void ScreenWidget::timerEvent(QTimerEvent *event)

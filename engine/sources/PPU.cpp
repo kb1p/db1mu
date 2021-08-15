@@ -360,13 +360,17 @@ void PPU::drawNextLine() noexcept
         m_st.vramAddr = incrWrpAddrVert(m_st.vramAddr);
 
     if (!NTSCLineSkip)
+    {
+        assert(m_pBackend != nullptr);
         m_pBackend->setLine(m_currLine, lnData + fineX, bus().readVideoMem(0x3F00u));
+    }
 
     m_currLine++;
 }
 
 void PPU::endFrame() noexcept
 {
+    assert(m_pBackend != nullptr);
     m_pBackend->draw();
 }
 

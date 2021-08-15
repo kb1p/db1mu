@@ -3,42 +3,31 @@
 
 #include "storage.h"
 
+/// Interface that must be implemented using a concrete rendering system (e.g. Open GL ES)
+class RenderingBackend
+{
+protected:
+    RenderingBackend() = default;
+
+public:
+    RenderingBackend(const RenderingBackend&) = delete;
+    RenderingBackend(RenderingBackend&&) = delete;
+
+    RenderingBackend &operator=(const RenderingBackend&) = delete;
+    RenderingBackend &operator=(RenderingBackend&&) = delete;
+
+    virtual ~RenderingBackend() = default;
+
+    virtual void setLine(const int n,
+                            const c6502_byte_t *pColorData,
+                            const c6502_byte_t bgColor) = 0;
+    virtual void draw() = 0;
+};
+
 class PPU: public Component
 {
 public:
-    /// Interface that must be implemented using a concrete rendering system (e.g. Open GL ES)
-    class RenderingBackend
-    {
-        PPU *m_pPPU = nullptr;
-
-    protected:
-        RenderingBackend() = default;
-        virtual ~RenderingBackend() = default;
-
-    public:
-        RenderingBackend(const RenderingBackend&) = delete;
-        RenderingBackend(RenderingBackend&&) = delete;
-
-        RenderingBackend &operator=(const RenderingBackend&) = delete;
-        RenderingBackend &operator=(RenderingBackend&&) = delete;
-
-        virtual void setLine(const int n,
-                             const c6502_byte_t *pColorData,
-                             const c6502_byte_t bgColor) = 0;
-        virtual void draw() = 0;
-
-        void setPPUInstance(PPU *pPPU) noexcept
-        {
-            m_pPPU = pPPU;
-        }
-    };
-
-    explicit PPU(RenderingBackend *rbe):
-        m_pBackend { rbe }
-    {
-        assert(m_pBackend != nullptr);
-        m_pBackend->setPPUInstance(this);
-    }
+    PPU() = default;
 
     // Prohibit copying
     PPU(const PPU&) = delete;
@@ -86,6 +75,11 @@ public:
         }
     };
 
+    void setBackend(RenderingBackend *rbe) noexcept
+    {
+        m_pBackend = rbe;
+    }
+
     void writeRegister(c6502_word_t n, c6502_byte_t val) noexcept;
     c6502_byte_t readRegister(c6502_word_t n) noexcept;
 
@@ -121,7 +115,7 @@ private:
     static constexpr int PPR = 256,
                          PPC = 240;
 
-    RenderingBackend *const m_pBackend;
+    RenderingBackend *m_pBackend = nullptr;
 
     State m_st;
     int m_currLine = 0;

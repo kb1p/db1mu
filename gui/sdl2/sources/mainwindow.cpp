@@ -42,23 +42,18 @@ void MainWindow::initialize()
     logCfg.filter = Log::LEVEL_DEBUG;
     logCfg.autoFlush = true;
 
-    m_renderingBackend.reset(new GLRenderingBackend<GLFunctionsWrapper>);
-    m_renderingBackend->init(&m_glFuncWrp);
+    m_RBE.init(&m_glFuncWrp);
+    m_ppu.setBackend(&m_RBE);
+
+    m_bus.setCPU(&m_cpu);
+    m_bus.setPPU(&m_ppu);
+    m_bus.setGamePad(0, &m_padLeft);
+    m_bus.setGamePad(1, &m_padRight);
+
+    // Set initial viewport size
     int w = 0, h = 0;
     SDL_GetWindowSize(m_sdlWin, &w, &h);
-    m_renderingBackend->resize(w, h);
-
-    m_bus.reset(new Bus { OutputMode::NTSC });
-    m_cpu.reset(new CPU6502);
-    m_ppu.reset(new PPU { m_renderingBackend.get() });
-    m_cartridge.reset(new Cartrige);
-    m_padLeft.reset(new Gamepad);
-    m_padRight.reset(new Gamepad);
-
-    m_bus->setCPU(m_cpu.get());
-    m_bus->setPPU(m_ppu.get());
-    m_bus->setGamePad(0, m_padLeft.get());
-    m_bus->setGamePad(1, m_padRight.get());
+    m_RBE.resize(w, h);
 }
 
 void MainWindow::loadROM(const char *romFileName)
@@ -66,9 +61,9 @@ void MainWindow::loadROM(const char *romFileName)
     try
     {
         Log::i("Loading ROM file %s", romFileName);
-        ROMLoader loader { *m_cartridge };
+        ROMLoader loader { m_cartridge };
         loader.loadNES(romFileName);
-        m_bus->injectCartrige(m_cartridge.get());
+        m_bus.injectCartrige(&m_cartridge);
     }
     catch (const Exception &ex)
     {
@@ -79,9 +74,9 @@ void MainWindow::loadROM(const char *romFileName)
 
 void MainWindow::update()
 {
-    if (m_bus->getCartrige())
+    if (m_bus.getCartrige())
     {
-        m_bus->runFrame();
+        m_bus.runFrame();
     }
     else
     {
@@ -115,7 +110,7 @@ void MainWindow::handleEvent(const SDL_Event &evt)
                 });
 
                 if (i != std::end(m_keyMapLeft))
-                    m_padLeft->buttonEvent(i->padKey, pressed, i->turbo, false);
+                    m_padLeft.buttonEvent(i->padKey, pressed, i->turbo, false);
                 else
                 {
                     // Pad 2?
@@ -127,13 +122,13 @@ void MainWindow::handleEvent(const SDL_Event &evt)
                     });
 
                     if (i != std::end(m_keyMapRight))
-                        m_padRight->buttonEvent(i->padKey, pressed, i->turbo, false);
+                        m_padRight.buttonEvent(i->padKey, pressed, i->turbo, false);
                 }
             }
             break;
         case SDL_WINDOWEVENT:
             if (evt.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-                m_renderingBackend->resize(evt.window.data1, evt.window.data2);
+                m_RBE.resize(evt.window.data1, evt.window.data2);
     }
 }
 

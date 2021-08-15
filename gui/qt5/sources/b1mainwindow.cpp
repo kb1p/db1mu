@@ -83,14 +83,14 @@ struct NESEngine
          { Qt::Key_PageDown, Button::B,      false }
      };
 
-     NESEngine(OutputMode mode, PPU::RenderingBackend *pBackend):
-        bus { mode },
-        ppu { pBackend }
+     NESEngine(OutputMode mode, RenderingBackend *pBackend):
+        bus { mode }
     {
         bus.setCPU(&cpu);
         bus.setPPU(&ppu);
         bus.setGamePad(0, &padLeft);
         bus.setGamePad(1, &padRight);
+        ppu.setBackend(pBackend);
     }
 };
 

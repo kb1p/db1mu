@@ -9,7 +9,6 @@
 #include <gamepad.h>
 #include <Cartridge.h>
 #include <SDL2/SDL.h>
-#include <memory>
 #include <string>
 
 class MainWindow
@@ -21,17 +20,15 @@ class MainWindow
         bool turbo;
     };
 
-    using RenderingBackend = GLRenderingBackend<GLFunctionsWrapper>;
-
     SDL_Window *m_sdlWin = nullptr;
-    std::unique_ptr<Bus> m_bus;
-    std::unique_ptr<CPU6502> m_cpu;
-    std::unique_ptr<PPU> m_ppu;
-    std::unique_ptr<Cartrige> m_cartridge;
-    std::unique_ptr<Gamepad> m_padLeft,
-                             m_padRight;
+    Bus m_bus { OutputMode::NTSC };
+    CPU6502 m_cpu;
+    PPU m_ppu;
+    Cartrige m_cartridge;
+    Gamepad m_padLeft,
+            m_padRight;
     GLFunctionsWrapper m_glFuncWrp;
-    std::unique_ptr<RenderingBackend> m_renderingBackend;
+    GLRenderingBackend<GLFunctionsWrapper> m_RBE;
     bool ready = false;
 
     KeyMap m_keyMapLeft[10] = {

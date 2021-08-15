@@ -9,9 +9,9 @@
 #include <cassert>
 #include <fstream>
 
-void Bus::injectCartrige(Cartrige *cart)
+void Bus::reset(OutputMode mode)
 {
-    m_pCart = cart;
+    m_mode = mode;
 
     // Clear memory
     m_ram.Clear();
@@ -19,10 +19,18 @@ void Bus::injectCartrige(Cartrige *cart)
     m_vramPal.Clear();
     m_spriteMem.Clear();
 
+    // Send reset commands to PPU and CPU
     m_pPPU->reset();
     m_pCPU->reset();
 
     m_nFrame = 0;
+}
+
+void Bus::injectCartrige(Cartrige *cart)
+{
+    m_pCart = cart;
+
+    reset();
 }
 
 void Bus::setCPU(CPU6502 *pCPU) noexcept

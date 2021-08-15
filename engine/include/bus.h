@@ -51,12 +51,12 @@ class Bus
     // Gamepad strobing register
     c6502_byte_t m_strobeReg = 0u;
 
-    const OutputMode m_mode;
+    OutputMode m_mode;
 
     int m_nFrame = 0;
 
 public:
-    explicit Bus(OutputMode m):
+    Bus(OutputMode m):
         m_mode { m }
     {
     }
@@ -83,6 +83,13 @@ public:
     OutputMode getMode() const noexcept
     {
         return m_mode;
+    }
+
+    void reset(OutputMode mode);
+
+    void reset()
+    {
+        reset(m_mode);
     }
 
     void injectCartrige(Cartrige *cart);
