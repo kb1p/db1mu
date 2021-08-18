@@ -19,8 +19,6 @@
 #include <stddef.h>
 #include <cassert>
 
-typedef unsigned int uint;
-
 // TRACE shorthand for branching operations
 #define TRACE_B(name, c) TRACE(name " cond=%s", (c) ? "true" : "false")
 

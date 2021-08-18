@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cassert>
 
+typedef unsigned int uint;
 typedef uint8_t c6502_byte_t;
 typedef uint16_t c6502_word_t;
 typedef uint32_t c6502_d_word_t;

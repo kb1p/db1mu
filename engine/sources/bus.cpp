@@ -99,6 +99,8 @@ void Bus::runFrame()
         m_pCPU->run(CPL);
 
     m_pPPU->onEndVblank();
+
+    m_pAPU->runFrame();
 }
 
 int Bus::currentTimeMs() const noexcept
