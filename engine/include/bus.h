@@ -80,6 +80,13 @@ public:
         return m_pPPU;
     }
 
+    void setAPU(APU *pAPU) noexcept;
+
+    APU *getAPU() const noexcept
+    {
+        return m_pAPU;
+    }
+
     OutputMode getMode() const noexcept
     {
         return m_mode;

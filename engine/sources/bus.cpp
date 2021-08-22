@@ -22,6 +22,7 @@ void Bus::reset(OutputMode mode)
     // Send reset commands to PPU and CPU
     m_pPPU->reset();
     m_pCPU->reset();
+    m_pAPU->reset();
 
     m_nFrame = 0;
 }
@@ -45,6 +46,13 @@ void Bus::setPPU(PPU *pPPU) noexcept
     assert(pPPU != nullptr);
     m_pPPU = pPPU;
     pPPU->setBus(this);
+}
+
+void Bus::setAPU(APU *pAPU) noexcept
+{
+    assert(pAPU != nullptr);
+    m_pAPU = pAPU;
+    pAPU->setBus(this);
 }
 
 void Bus::setGamePad(int n, Gamepad *pad) noexcept
@@ -100,6 +108,7 @@ void Bus::runFrame()
 
     m_pPPU->onEndVblank();
 
+    // Clock APU
     m_pAPU->runFrame();
 }
 
@@ -131,10 +140,10 @@ c6502_byte_t Bus::readMem(c6502_word_t addr)
                 case 0x4017u:
                     rv = m_pGamePads[1] ? m_pGamePads[1]->readRegister() : 0u;
                     break;
-                /*default:
+                default:
                     assert(m_pAPU != nullptr);
-                    rv = m_pAPU->readRegister(addr & 0x0Fu);
-                    break;*/
+                    rv = m_pAPU->readRegister(addr & 0x1Fu);
+                    break;
             }
             break;
         case 3:
@@ -189,9 +198,9 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
 
                     break;
                 }
-                /*default:
+                default:
                     assert(m_pAPU != nullptr);
-                    m_pAPU->writeRegister(addr & 0x0Fu, val);*/
+                    m_pAPU->writeRegister(addr & 0x1Fu, val);
             }
             break;
         case 3:

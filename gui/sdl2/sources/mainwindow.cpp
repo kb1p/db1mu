@@ -45,8 +45,11 @@ void MainWindow::initialize()
     m_RBE.init(&m_glFuncWrp);
     m_ppu.setBackend(&m_RBE);
 
+    m_apu.setBackend(&m_audioBE);
+
     m_bus.setCPU(&m_cpu);
     m_bus.setPPU(&m_ppu);
+    m_bus.setAPU(&m_apu);
     m_bus.setGamePad(0, &m_padLeft);
     m_bus.setGamePad(1, &m_padRight);
 

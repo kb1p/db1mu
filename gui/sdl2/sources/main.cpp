@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     {
         auto opts = parseArguments(argc - 1, argv + 1);
 
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
             throw "SDL initialization failed";
 
         // Set to use OpenGL ES 2.0

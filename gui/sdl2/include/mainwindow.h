@@ -3,8 +3,10 @@
 
 #include "glfuncwrp.h"
 #include "glbe.h"
+#include "sdl_playback_be.h"
 #include <bus.h>
 #include <PPU.h>
+#include <APU.h>
 #include <cpu6502.h>
 #include <gamepad.h>
 #include <Cartridge.h>
@@ -21,14 +23,17 @@ class MainWindow
     };
 
     SDL_Window *m_sdlWin = nullptr;
+
     Bus m_bus { OutputMode::NTSC };
     CPU6502 m_cpu;
     PPU m_ppu;
+    APU m_apu;
     Cartrige m_cartridge;
     Gamepad m_padLeft,
             m_padRight;
     GLFunctionsWrapper m_glFuncWrp;
     GLRenderingBackend<GLFunctionsWrapper> m_RBE;
+    SDLPlaybackBackend m_audioBE;
     bool ready = false;
 
     KeyMap m_keyMapLeft[10] = {
