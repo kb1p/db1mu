@@ -107,7 +107,7 @@ void PulseChannel::clockLengthCounterSweep() noexcept
 void PulseChannel::adjustPeriod() noexcept
 {
     const uint x = m_timerPeriod >> m_swpShift;
-    m_swpTargetPeriod += m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x;
+    m_swpTargetPeriod = m_timerPeriod + (m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x);
 }
 
 uint PulseChannel::sample() noexcept
@@ -162,11 +162,12 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             else
                 m_pulse1.envelope().setDividerPeriod(val & 0b1111u);
             m_pulse1.setLengthCounterHalt(val & 0b100000u);
+            m_pulse1.envelope().setLoop(val & 0b100000u);
             m_pulse1.setDuty((val & 0b11000000u) >> 6u);
             break;
         case RCT1_GEN:
             m_pulse1.setSweepParams(val & 0x80u,
-                                    (val & 0x70u) >> 4u,
+                                    ((val & 0x70u) >> 4u) + 1,
                                     val & 0x8u,
                                     val & 0x7u);
             break;
@@ -184,11 +185,12 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             else
                 m_pulse2.envelope().setDividerPeriod(val & 0b1111u);
             m_pulse2.setLengthCounterHalt(val & 0b100000u);
+            m_pulse2.envelope().setLoop(val & 0b100000u);
             m_pulse2.setDuty((val & 0b11000000u) >> 6u);
             break;
         case RCT2_GEN:
             m_pulse2.setSweepParams(val & 0x80u,
-                                    (val & 0x70u) >> 4u,
+                                    ((val & 0x70u) >> 4u) + 1u,
                                     val & 0x8u,
                                     val & 0x7u);
             break;
@@ -237,7 +239,7 @@ void APU::runFrame()
                     m_pulse2.clockLengthCounterSweep();
                 }
                 m_pulse1.envelope().clock();
-                m_pulse1.envelope().clock();
+                m_pulse2.envelope().clock();
 
                 // TODO: trigger IRQ
                 // if (!m_5step && c == 4)

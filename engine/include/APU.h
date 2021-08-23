@@ -15,7 +15,7 @@ public:
     virtual void init() noexcept = 0;
     virtual uint getPlaybackFrequency() const noexcept = 0;
     virtual void beginFrame(uint nSamples) noexcept = 0;
-    virtual void queueSample(float v) = 0;
+    virtual void queueSample(float v) noexcept = 0;
     virtual void endFrame() noexcept = 0;
 };
 

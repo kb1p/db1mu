@@ -23,7 +23,7 @@ public:
     }
 
     void beginFrame(uint nSamples) noexcept override;
-    void queueSample(float v) override;
+    void queueSample(float v) noexcept override;
     void endFrame() noexcept override;
 };
 

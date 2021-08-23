@@ -20,7 +20,7 @@ void SDLPlaybackBackend::init() noexcept
         reqFmt.freq = m_frequency;
         reqFmt.format = AUDIO_F32;
         reqFmt.channels = 1;
-        reqFmt.samples = 4096;
+        reqFmt.samples = 512;
 
         const auto n = SDL_GetNumAudioDevices(SDL_FALSE);
 
@@ -45,7 +45,7 @@ void SDLPlaybackBackend::beginFrame(uint nSamples) noexcept
     m_sampleBuf.reserve(nSamples);
 }
 
-void SDLPlaybackBackend::queueSample(float v)
+void SDLPlaybackBackend::queueSample(float v) noexcept
 {
     m_sampleBuf.push_back(v);
 }
