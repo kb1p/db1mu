@@ -59,18 +59,25 @@ void Envelope::clock() noexcept
     }
 }
 
+void APUChannel::setLengthCounterLoad(uint l) noexcept
+{
+    assert(l < 32);
+    if (m_enabled)
+        m_lenCnt = LC_TABLE[l];
+}
+
+void APUChannel::clockLengthCounter() noexcept
+{
+    if (!m_lenCntHalt && m_lenCnt > 0u)
+        m_lenCnt--;
+}
+
 const uint PulseChannel::SEQUENCER[4][8] = {
     { 0, 1, 0, 0, 0, 0, 0, 0 },
     { 0, 1, 1, 0, 0, 0, 0, 0 },
     { 0, 1, 1, 1, 1, 0, 0, 0 },
     { 1, 0, 0, 1, 1, 1, 1, 1 }
 };
-
-void PulseChannel::setLengthCounterLoad(uint l) noexcept
-{
-    assert(l < 32);
-    m_lc = LC_TABLE[l];
-}
 
 void PulseChannel::clockTimer() noexcept
 {
@@ -83,7 +90,7 @@ void PulseChannel::clockTimer() noexcept
     }
 }
 
-void PulseChannel::clockLengthCounterSweep() noexcept
+void PulseChannel::clockSweep() noexcept
 {
     // Sweep
     if (m_swpReload)
@@ -98,10 +105,6 @@ void PulseChannel::clockLengthCounterSweep() noexcept
         m_swpCounter = m_swpPeriod;
         adjustPeriod();
     }
-
-    // Length counter
-    if (!m_lcHalt && m_lc > 0u)
-        m_lc--;
 }
 
 void PulseChannel::adjustPeriod() noexcept
@@ -115,14 +118,46 @@ uint PulseChannel::sample() noexcept
     uint rv = 0u;
 
     const auto currentPeriod = m_swpEnabled ? m_swpTargetPeriod : m_timerPeriod;
-    if (m_enabled &&
-        currentPeriod >= 8u &&
+    if (currentPeriod >= 8u &&
         m_swpTargetPeriod <= 0x7ffu &&
-        (m_lcHalt || m_lc > 0u) &&
+        lengthCounter() > 0u &&
         SEQUENCER[m_duty][m_seqIndex] > 0u)
         rv = m_envelope.volume();
 
     return rv;
+}
+
+const uint TriangleChannel::SEQUENCER[32] = {
+    15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+};
+
+void TriangleChannel::clockLinearCounter() noexcept
+{
+    if (m_linCntReload)
+        m_linCnt = m_linCntSet;
+    else if (m_linCnt > 0u)
+        m_linCnt--;
+
+    if (!m_linCntControl)
+        m_linCntReload = false;
+}
+
+void TriangleChannel::clockTimer() noexcept
+{
+    if (m_timerCnt-- == 0u)
+    {
+        m_timerCnt = m_timerPeriod;
+
+        // Trigger sequencer switch if both counters are non-zero
+        if (lengthCounter() > 0u && m_linCnt > 0u)
+            m_seqIndex = (m_seqIndex + 1) % 32;
+    }
+}
+
+uint TriangleChannel::sample() noexcept
+{
+    return SEQUENCER[m_seqIndex];
 }
 
 c6502_byte_t APU::readRegister(c6502_word_t reg)
@@ -131,8 +166,9 @@ c6502_byte_t APU::readRegister(c6502_word_t reg)
     switch (reg)
     {
         case CTRL_STATUS:
-            rv |= m_pulse1.lengthCounter() > 0u ? 0b01u : 0u;
-            rv |= m_pulse2.lengthCounter() > 0u ? 0b10u : 0u;
+            rv |= m_pulse1.lengthCounter() > 0u ? 0b001u : 0u;
+            rv |= m_pulse2.lengthCounter() > 0u ? 0b010u : 0u;
+            rv |= m_tri.lengthCounter() > 0u ? 0b100u : 0u;
             break;
         default:
             Log::e("Attempt to read from illegal APU register 0x%X (returned zero)", reg);
@@ -202,6 +238,17 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             m_pulse2.setLengthCounterLoad((val >> 3u) & 0b11111u);
             m_pulse2.envelope().restart();
             break;
+        case TRI_CTRL:
+            m_tri.setLinearCounter(val & 0x80u, val & 0x7Fu);
+            break;
+        case TRI_FREQ1:
+            m_tri.setTimerLo(val);
+            break;
+        case TRI_FREQ2:
+            m_tri.setTimerHi(val & 0b111u);
+            m_tri.setLengthCounterLoad((val >> 3u) & 0b11111u);
+            m_tri.setLinearCounterReloadFlag();
+            break;
     }
 }
 
@@ -235,11 +282,15 @@ void APU::runFrame()
                 if ((m_5step && (step == 1 || step == 3)) ||
                     (!m_5step && (step == 2 || step == 4)))
                 {
-                    m_pulse1.clockLengthCounterSweep();
-                    m_pulse2.clockLengthCounterSweep();
+                    m_pulse1.clockLengthCounter();
+                    m_pulse1.clockSweep();
+                    m_pulse2.clockLengthCounter();
+                    m_pulse2.clockSweep();
+                    m_tri.clockLengthCounter();
                 }
                 m_pulse1.envelope().clock();
                 m_pulse2.envelope().clock();
+                m_tri.clockLinearCounter();
 
                 // TODO: trigger IRQ
                 // if (!m_5step && c == 4)

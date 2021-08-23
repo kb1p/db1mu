@@ -66,15 +66,43 @@ private:
          m_vol = 0x10u;
 };
 
+// Common properties for all channels (length counter)
+class APUChannel
+{
+    bool m_enabled = false,
+         m_lenCntHalt = false;
+
+    uint m_lenCnt = 0u;
+
+public:
+    void setEnabled(bool e) noexcept
+    {
+        m_enabled = e;
+        if (!m_enabled)
+            m_lenCnt = 0u;
+    }
+
+    void setLengthCounterHalt(bool lch) noexcept
+    {
+        m_lenCntHalt = lch;
+    }
+
+    void setLengthCounterLoad(uint l) noexcept;
+
+    void clockLengthCounter() noexcept;
+
+    uint lengthCounter() const noexcept
+    {
+        return m_lenCnt;
+    }
+};
+
 // Pulse channel
-class PulseChannel
+class PulseChannel: public APUChannel
 {
     static const uint SEQUENCER[4][8];
 
-    bool m_enabled = false,
-         m_lcHalt = false;
-    uint m_lc = 0u,
-         m_timerPeriod = 0u,
+    uint m_timerPeriod = 0u,
          m_duty = 0u,
          m_timerCnt = 0u,
          m_seqIndex = 0u;
@@ -97,20 +125,6 @@ public:
         m_swpNegErr { swpNegErr }
     {
     }
-
-    void setEnabled(bool e) noexcept
-    {
-        m_enabled = e;
-        if (!m_enabled)
-            m_lc = 0u;
-    }
-
-    void setLengthCounterHalt(bool lch) noexcept
-    {
-        m_lcHalt = lch;
-    }
-
-    void setLengthCounterLoad(uint l) noexcept;
 
     void setDuty(uint d) noexcept
     {
@@ -137,61 +151,67 @@ public:
     }
 
     void clockTimer() noexcept;
-    void clockLengthCounterSweep() noexcept;
+    void clockSweep() noexcept;
 
     Envelope &envelope() noexcept
     {
         return m_envelope;
     }
 
-    uint lengthCounter() const noexcept
-    {
-        return m_lc;
-    }
-
     uint sample() noexcept;
 };
 
-class TriangleChannel
+class TriangleChannel: public APUChannel
 {
-    bool m_enabled = false;
-    uint m_lc = 0u;
+    static const uint SEQUENCER[32];
+
+    bool m_linCntReload = false,
+         m_linCntControl = false;
+    uint m_timerPeriod = 0u,
+         m_timerCnt = 0u,
+         m_seqIndex = 0u,
+         m_linCntSet = 0u,
+         m_linCnt = 0u;
 
 public:
-    void setEnabled(bool e) noexcept
+    void setTimerLo(c6502_byte_t v) noexcept
     {
-        m_enabled = e;
+        m_timerPeriod = v;
     }
 
+    void setTimerHi(c6502_byte_t v) noexcept
+    {
+        m_timerPeriod |= v << 8u;
+    }
+
+    void setLinearCounter(bool ctrl, uint linCtr) noexcept
+    {
+        m_linCntControl = ctrl;
+        m_linCntSet = linCtr;
+    }
+
+    void setLinearCounterReloadFlag() noexcept
+    {
+        m_linCntReload = true;
+    }
+
+    void clockLinearCounter() noexcept;
+    void clockTimer() noexcept;
+    uint sample() noexcept;
+};
+
+class NoiseChannel: public APUChannel
+{
+public:
     void clockTimer() noexcept { }
     uint sample() noexcept { return 0u; }
 };
 
-class NoiseChannel
+// DMC - Delta Modulation Channel
+// Plays sampled audio data (not available on Dendy).
+class DMChannel: public APUChannel
 {
-    bool m_enabled = false;
-    uint m_lc = 0u;
-
 public:
-    void setEnabled(bool e) noexcept
-    {
-        m_enabled = e;
-    }
-
-    void clockTimer() noexcept { }
-    uint sample() noexcept { return 0u; }
-};
-
-class DMCChannel
-{
-    bool m_enabled = false;
-
-public:
-    void setEnabled(bool e) noexcept
-    {
-        m_enabled = e;
-    }
-
     void clockTimer() noexcept { }
     uint sample() noexcept { return 0u; }
 };
@@ -241,7 +261,7 @@ private:
                  m_pulse2 { false };
     TriangleChannel m_tri;
     NoiseChannel m_noise;
-    DMCChannel m_dmc;
+    DMChannel m_dmc;
 };
 
 #endif
