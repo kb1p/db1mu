@@ -118,8 +118,6 @@ class PulseChannel: public APUChannel
          m_swpShift = 0u,
          m_swpTargetPeriod = 0u;
 
-    void adjustPeriod() noexcept;
-
 public:
     PulseChannel(bool swpNegErr):
         m_swpNegErr { swpNegErr }
@@ -140,14 +138,19 @@ public:
         m_swpReload = true;
     }
 
-    void setTimerLo(c6502_byte_t v) noexcept
+    void setTimerLo(uint v) noexcept
     {
         m_timerPeriod = v;
     }
 
-    void setTimerHi(c6502_byte_t v) noexcept
+    void setTimerHi(uint v) noexcept
     {
         m_timerPeriod |= v << 8u;
+    }
+
+    void restartSequencer() noexcept
+    {
+        m_seqIndex = 0u;
     }
 
     void clockTimer() noexcept;
@@ -174,12 +177,12 @@ class TriangleChannel: public APUChannel
          m_linCnt = 0u;
 
 public:
-    void setTimerLo(c6502_byte_t v) noexcept
+    void setTimerLo(uint v) noexcept
     {
         m_timerPeriod = v;
     }
 
-    void setTimerHi(c6502_byte_t v) noexcept
+    void setTimerHi(uint v) noexcept
     {
         m_timerPeriod |= v << 8u;
     }
@@ -188,6 +191,7 @@ public:
     {
         m_linCntControl = ctrl;
         m_linCntSet = linCtr;
+        setLengthCounterHalt(ctrl);
     }
 
     void setLinearCounterReloadFlag() noexcept

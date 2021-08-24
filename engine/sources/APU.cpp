@@ -51,11 +51,10 @@ void Envelope::clock() noexcept
     else if (m_divCnt-- == 0)
     {
         m_divCnt = m_divPeriod;
-        if (m_dlc-- == 0)
-        {
-            if (m_loop)
-                m_dlc = 15u;
-        }
+        if (m_dlc > 0u)
+            m_dlc--;
+        else if (m_loop)
+            m_dlc = 15u;
     }
 }
 
@@ -83,7 +82,7 @@ void PulseChannel::clockTimer() noexcept
 {
     if (m_timerCnt-- == 0u)
     {
-        m_timerCnt = m_swpEnabled ? m_swpTargetPeriod : m_timerPeriod;
+        m_timerCnt = m_timerPeriod;
 
         // Trigger sequencer switch
         m_seqIndex = (m_seqIndex + 1) % 8;
@@ -92,33 +91,31 @@ void PulseChannel::clockTimer() noexcept
 
 void PulseChannel::clockSweep() noexcept
 {
-    // Sweep
+    m_swpCounter--;
+    const uint x = m_timerPeriod >> m_swpShift;
+    m_swpTargetPeriod = m_timerPeriod + (m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x);
+
     if (m_swpReload)
     {
         m_swpReload = false;
-        if (m_swpEnabled && m_swpCounter == 0u)
-            adjustPeriod();
         m_swpCounter = m_swpPeriod;
     }
-    else if (m_swpCounter-- == 0u)
+    else if (m_swpCounter == 0u)
     {
         m_swpCounter = m_swpPeriod;
-        adjustPeriod();
+        if (m_swpEnabled &&
+            m_swpShift > 0u &&
+            m_timerPeriod >= 8u &&
+            m_swpTargetPeriod <= 0x7ffu)
+            m_timerPeriod = m_swpTargetPeriod;
     }
-}
-
-void PulseChannel::adjustPeriod() noexcept
-{
-    const uint x = m_timerPeriod >> m_swpShift;
-    m_swpTargetPeriod = m_timerPeriod + (m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x);
 }
 
 uint PulseChannel::sample() noexcept
 {
     uint rv = 0u;
 
-    const auto currentPeriod = m_swpEnabled ? m_swpTargetPeriod : m_timerPeriod;
-    if (currentPeriod >= 8u &&
+    if (m_timerPeriod >= 8u &&
         m_swpTargetPeriod <= 0x7ffu &&
         lengthCounter() > 0u &&
         SEQUENCER[m_duty][m_seqIndex] > 0u)
@@ -193,13 +190,19 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             m_dmc.setEnabled(val & 0x10u);
             break;
         case RCT1_CTRL:
-            if (val & 0b10000u)
-                m_pulse1.envelope().setVolume(val & 0b1111u);
-            else
-                m_pulse1.envelope().setDividerPeriod(val & 0b1111u);
-            m_pulse1.setLengthCounterHalt(val & 0b100000u);
-            m_pulse1.envelope().setLoop(val & 0b100000u);
-            m_pulse1.setDuty((val & 0b11000000u) >> 6u);
+            {
+                auto &ev = m_pulse1.envelope();
+                if (val & 0b10000u)
+                    ev.setVolume(val & 0b1111u);
+                else
+                {
+                    ev.setVolume(Envelope::ENVELOPE_VOLUME);
+                    ev.setDividerPeriod((val & 0b1111u) + 1u);
+                }
+                ev.setLoop(val & 0b100000u);
+                m_pulse1.setLengthCounterHalt(val & 0b100000u);
+                m_pulse1.setDuty((val & 0b11000000u) >> 6u);
+            }
             break;
         case RCT1_GEN:
             m_pulse1.setSweepParams(val & 0x80u,
@@ -214,15 +217,22 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             m_pulse1.setTimerHi(val & 0b111u);
             m_pulse1.setLengthCounterLoad((val >> 3u) & 0b11111u);
             m_pulse1.envelope().restart();
+            m_pulse1.restartSequencer();
             break;
         case RCT2_CTRL:
-            if (val & 0b10000u)
-                m_pulse2.envelope().setVolume(val & 0b1111u);
-            else
-                m_pulse2.envelope().setDividerPeriod(val & 0b1111u);
-            m_pulse2.setLengthCounterHalt(val & 0b100000u);
-            m_pulse2.envelope().setLoop(val & 0b100000u);
-            m_pulse2.setDuty((val & 0b11000000u) >> 6u);
+            {
+                auto &ev = m_pulse2.envelope();
+                if (val & 0b10000u)
+                    ev.setVolume(val & 0b1111u);
+                else
+                {
+                    ev.setVolume(Envelope::ENVELOPE_VOLUME);
+                    ev.setDividerPeriod((val & 0b1111u) + 1u);
+                }
+                ev.setLoop(val & 0b100000u);
+                m_pulse2.setLengthCounterHalt(val & 0b100000u);
+                m_pulse2.setDuty((val & 0b11000000u) >> 6u);
+            }
             break;
         case RCT2_GEN:
             m_pulse2.setSweepParams(val & 0x80u,
@@ -237,6 +247,7 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             m_pulse2.setTimerHi(val & 0b111u);
             m_pulse2.setLengthCounterLoad((val >> 3u) & 0b11111u);
             m_pulse2.envelope().restart();
+            m_pulse2.restartSequencer();
             break;
         case TRI_CTRL:
             m_tri.setLinearCounter(val & 0x80u, val & 0x7Fu);
@@ -267,7 +278,7 @@ void APU::runFrame()
     // How much clocks to skip before triggering frame sequencer.
     // Need to align last clock with the last clock of the main timer, so
     // division is rounding to floor.
-    const int fsPeriod = nClocks / (m_5step ? 5 : 4);
+    const int fsPeriod = divrnd(nClocks, m_5step ? 5 : 4);
     int fsStep = 0;
     m_pBackend->beginFrame(nClocks / sampleRate + 1);
     for (uint c = 0; c < nClocks; c++)
