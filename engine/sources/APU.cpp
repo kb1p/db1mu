@@ -273,14 +273,14 @@ void APU::runFrame()
     const auto nRecvClocks = bus().getMode() == OutputMode::NTSC ?
                              divrnd(m_pBackend->getPlaybackFrequency(), 60u) :
                              divrnd(m_pBackend->getPlaybackFrequency(), 50u);
-    const auto sampleRate = nClocks / nRecvClocks;
+    const auto sampleRate = divrnd(nClocks, nRecvClocks);
 
     // How much clocks to skip before triggering frame sequencer.
     // Need to align last clock with the last clock of the main timer, so
     // division is rounding to floor.
     const int fsPeriod = divrnd(nClocks, m_5step ? 5 : 4);
     int fsStep = 0;
-    m_pBackend->beginFrame(nClocks / sampleRate + 1);
+    m_pBackend->beginFrame(nClocks / sampleRate);
     for (uint c = 0; c < nClocks; c++)
     {
         // Clock frame sequencer. Skip immediate triggering at 0
