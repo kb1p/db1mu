@@ -1,6 +1,6 @@
 project(gb1mulator)
 
-find_package(Qt5 REQUIRED Widgets)
+find_package(Qt5 REQUIRED Widgets Multimedia)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories("include"
@@ -19,6 +19,6 @@ message("UIs: ${uis}")
 
 add_executable(b1mulator ${sources} ${mocs} ${uis})
 
-target_link_libraries(b1mulator b1-eng Qt5::Widgets)
+target_link_libraries(b1mulator b1-eng Qt5::Widgets Qt5::Multimedia)
 
 install(TARGETS b1mulator DESTINATION "bin")

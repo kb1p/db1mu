@@ -28,6 +28,7 @@
 
 #include "b1mainwindow.h"
 #include "ui_b1mainwindow.h"
+#include "qt_playback_be.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -38,6 +39,7 @@
 #include <bus.h>
 #include <cpu6502.h>
 #include <PPU.h>
+#include <APU.h>
 #include <Cartridge.h>
 #include <loader.h>
 #include <gamepad.h>
@@ -55,6 +57,7 @@ struct NESEngine
      Bus bus;
      CPU6502 cpu;
      PPU ppu;
+     APU apu;
      Cartrige cartridge;
      Gamepad padLeft, padRight;
      bool ready = false;
@@ -83,14 +86,18 @@ struct NESEngine
          { Qt::Key_PageDown, Button::B,      false }
      };
 
-     NESEngine(OutputMode mode, RenderingBackend *pBackend):
+     NESEngine(OutputMode mode,
+               RenderingBackend *pVideoBackend,
+               PlaybackBackend *pAudioBackend):
         bus { mode }
     {
         bus.setCPU(&cpu);
         bus.setPPU(&ppu);
+        bus.setAPU(&apu);
         bus.setGamePad(0, &padLeft);
         bus.setGamePad(1, &padRight);
-        ppu.setBackend(pBackend);
+        ppu.setBackend(pVideoBackend);
+        apu.setBackend(pAudioBackend);
     }
 };
 
@@ -108,7 +115,8 @@ b1MainWindow::b1MainWindow()
     logCfg.autoFlush = true;
 
     m_eng.reset(new NESEngine { OutputMode::NTSC,
-                                m_screen->getRenderingBackend() });
+                                m_screen->getRenderingBackend(),
+                                new QtPlaybackBackend { this } });
     m_screen->setBus(&m_eng->bus);
 
     connect(m_screen, SIGNAL(fpsChanged(float)), SLOT(fpsUpdated(float)));

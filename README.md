@@ -23,6 +23,12 @@ This is a NES emulator project that is aimed to be highly portable. The final go
 * GLES 2.0 emulator for desktop platforms ([ARM Mali GLES emulator](https://developer.arm.com/tools-and-software/graphics-and-gaming/opengl-es-emulator/downloads) or [ANGLE](https://github.com/google/angle)).
 
 ### Qt5 frontend
+#### Install required Qt5 components
+```bash
+$ sudo apt install qt5-default qtmultimedia5-dev libqt5multimedia5-plugins
+```
+
+#### Build the emulator itself
 ```bash
 $ mkdir build ; cd build
 $ cmake -DCMAKE_INSTALL_PREFIX=path/to/install -DCMAKE_BUILD_TYPE=Release -DFRONTEND_TYPE=QT ..
@@ -47,7 +53,13 @@ Option             | Effect
 ### SDL frontend
 SDL frontend can be built with or without UI based on *ImGui Addons* UI.
 
-#### Build with ImGui Addons UI
+#### Install SDL2
+Installing `dev` package for SDL2 should be enough:
+```bash
+$ sudo apt install libsdl2-dev
+```
+
+#### Build emulator with ImGui Addons UI
 UI is developed using *ImGui Addons* project (https://github.com/Flix01/imgui). It is declared as submodule in `gui/sdl2/third_party` directory and needs to be checked out before building the emulator:
 ```bash
 $ git submodule init
@@ -60,7 +72,7 @@ $ cmake -DCMAKE_INSTALL_PREFIX=path/to/install -DCMAKE_BUILD_TYPE=Release -DFRON
 $ cmake --build . --config release --target install
 ```
 
-#### Build without UI
+#### Build emulator without UI
 Use the following commands:
 ```bash
 $ mkdir build ; cd build
