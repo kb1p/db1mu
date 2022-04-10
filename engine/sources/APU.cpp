@@ -77,22 +77,17 @@ const uint PulseChannel::SEQUENCER[4][8] = {
     { 1, 0, 0, 1, 1, 1, 1, 1 }
 };
 
-void PulseChannel::clockTimer() noexcept
+void PulseChannel::onTimeout() noexcept
 {
-    if (m_timerCnt-- == 0u)
-    {
-        m_timerCnt = m_timerPeriod;
-
-        // Trigger sequencer switch
-        m_seqIndex = (m_seqIndex + 1) % 8;
-    }
+    // Trigger sequencer switch
+    m_seqIndex = (m_seqIndex + 1) % 8;
 }
 
 void PulseChannel::clockSweep() noexcept
 {
     m_swpCounter--;
-    const uint x = m_timerPeriod >> m_swpShift;
-    m_swpTargetPeriod = m_timerPeriod + (m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x);
+    const uint x = timerPeriod() >> m_swpShift;
+    m_swpTargetPeriod = timerPeriod() + (m_swpNegate ? -(m_swpNegErr ? x - 1 : x) : x);
 
     if (m_swpReload)
     {
@@ -104,9 +99,9 @@ void PulseChannel::clockSweep() noexcept
         m_swpCounter = m_swpPeriod;
         if (m_swpEnabled &&
             m_swpShift > 0u &&
-            m_timerPeriod >= 8u &&
+            timerPeriod() >= 8u &&
             m_swpTargetPeriod <= 0x7ffu)
-            m_timerPeriod = m_swpTargetPeriod;
+            setTimerPeriod(m_swpTargetPeriod);
     }
 }
 
@@ -114,7 +109,7 @@ uint PulseChannel::sample() noexcept
 {
     uint rv = 0u;
 
-    if (m_timerPeriod >= 8u &&
+    if (timerPeriod() >= 8u &&
         m_swpTargetPeriod <= 0x7ffu &&
         lengthCounter() > 0u &&
         SEQUENCER[m_duty][m_seqIndex] > 0u)
@@ -139,16 +134,11 @@ void TriangleChannel::clockLinearCounter() noexcept
         m_linCntReload = false;
 }
 
-void TriangleChannel::clockTimer() noexcept
+void TriangleChannel::onTimeout() noexcept
 {
-    if (m_timerCnt-- == 0u)
-    {
-        m_timerCnt = m_timerPeriod;
-
-        // Trigger sequencer switch if both counters are non-zero
-        if (lengthCounter() > 0u && m_linCnt > 0u)
-            m_seqIndex = (m_seqIndex + 1) % 32;
-    }
+    // Trigger sequencer switch if both counters are non-zero
+    if (lengthCounter() > 0u && m_linCnt > 0u)
+        m_seqIndex = (m_seqIndex + 1) % 32;
 }
 
 uint TriangleChannel::sample() noexcept
@@ -164,17 +154,12 @@ const uint NoiseChannel::PERIOD_MAP_NTSC[16] = {
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-void NoiseChannel::clockTimer() noexcept
+void NoiseChannel::onTimeout() noexcept
 {
-    if (m_timerCnt-- == 0u)
-    {
-        m_timerCnt = m_timerPeriod;
-
-        // Update shift register
-        const auto mb = (m_shift >> (m_loop ? 6u : 1u)) & 0b01u;
-        const auto fb = ((m_shift & 0b01u) ^ mb) << 14u;
-        m_shift = ((m_shift >> 1u) & 0x3FFFu) | fb;
-    }
+    // Update shift register
+    const auto mb = (m_shift >> (m_loop ? 6u : 1u)) & 0b01u;
+    const auto fb = ((m_shift & 0b01u) ^ mb) << 14u;
+    m_shift = ((m_shift >> 1u) & 0x3FFFu) | fb;
 }
 
 uint NoiseChannel::sample() noexcept

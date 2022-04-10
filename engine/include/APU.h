@@ -73,7 +73,9 @@ class APUChannel
     bool m_enabled = false,
          m_lenCntHalt = false;
 
-    uint m_lenCnt = 0u;
+    uint m_lenCnt = 0u,
+         m_timerPeriod = 0u,
+         m_timerCnt = 0u;
 
 public:
     void setEnabled(bool e) noexcept
@@ -96,6 +98,28 @@ public:
     {
         return m_lenCnt;
     }
+
+    void clockTimer() noexcept
+    {
+        if (m_timerCnt-- == 0u)
+        {
+            m_timerCnt = m_timerPeriod;
+            onTimeout();
+        }
+    }
+
+protected:
+    virtual void onTimeout() noexcept = 0;
+
+    void setTimerPeriod(uint tp) noexcept
+    {
+        m_timerPeriod = tp;
+    }
+
+    uint timerPeriod() const noexcept
+    {
+        return m_timerPeriod;
+    }
 };
 
 // Pulse channel
@@ -103,9 +127,7 @@ class PulseChannel: public APUChannel
 {
     static const uint SEQUENCER[4][8];
 
-    uint m_timerPeriod = 0u,
-         m_duty = 0u,
-         m_timerCnt = 0u,
+    uint m_duty = 0u,
          m_seqIndex = 0u;
     Envelope m_envelope;
 
@@ -141,12 +163,12 @@ public:
 
     void setTimerLo(uint v) noexcept
     {
-        m_timerPeriod = v;
+        setTimerPeriod(v);
     }
 
     void setTimerHi(uint v) noexcept
     {
-        m_timerPeriod |= v << 8u;
+        setTimerPeriod(timerPeriod() | (v << 8u));
     }
 
     void restartSequencer() noexcept
@@ -154,7 +176,6 @@ public:
         m_seqIndex = 0u;
     }
 
-    void clockTimer() noexcept;
     void clockSweep() noexcept;
 
     Envelope &envelope() noexcept
@@ -163,6 +184,9 @@ public:
     }
 
     uint sample() noexcept;
+
+protected:
+    void onTimeout() noexcept override;
 };
 
 class TriangleChannel: public APUChannel
@@ -171,21 +195,19 @@ class TriangleChannel: public APUChannel
 
     bool m_linCntReload = false,
          m_linCntControl = false;
-    uint m_timerPeriod = 0u,
-         m_timerCnt = 0u,
-         m_seqIndex = 0u,
+    uint m_seqIndex = 0u,
          m_linCntSet = 0u,
          m_linCnt = 0u;
 
 public:
     void setTimerLo(uint v) noexcept
     {
-        m_timerPeriod = v;
+        setTimerPeriod(v);
     }
 
     void setTimerHi(uint v) noexcept
     {
-        m_timerPeriod |= v << 8u;
+        setTimerPeriod(timerPeriod() | (v << 8u));
     }
 
     void setLinearCounter(bool ctrl, uint linCtr) noexcept
@@ -201,8 +223,10 @@ public:
     }
 
     void clockLinearCounter() noexcept;
-    void clockTimer() noexcept;
     uint sample() noexcept;
+
+protected:
+    void onTimeout() noexcept override;
 };
 
 class NoiseChannel: public APUChannel
@@ -212,9 +236,7 @@ class NoiseChannel: public APUChannel
 
     OutputMode m_mode = OutputMode::NTSC;
     Envelope m_envelope;
-    uint m_shift = 1u,
-         m_timerPeriod = 0u,
-         m_timerCnt = 0u;
+    uint m_shift = 1u;
     bool m_loop = false;
 
 public:
@@ -227,7 +249,7 @@ public:
     void setPeriod(uint period) noexcept
     {
         assert(period <= 0x0Fu);
-        m_timerPeriod = (m_mode == OutputMode::NTSC ? PERIOD_MAP_NTSC : PERIOD_MAP_PAL)[period];
+        setTimerPeriod((m_mode == OutputMode::NTSC ? PERIOD_MAP_NTSC : PERIOD_MAP_PAL)[period]);
     }
 
     void setLoop(bool loop) noexcept
@@ -240,8 +262,10 @@ public:
         return m_envelope;
     }
 
-    void clockTimer() noexcept;
     uint sample() noexcept;
+
+protected:
+    void onTimeout() noexcept override;
 };
 
 // DMC - Delta Modulation Channel
@@ -249,8 +273,12 @@ public:
 class DMChannel: public APUChannel
 {
 public:
-    void clockTimer() noexcept { }
     uint sample() noexcept { return 0u; }
+
+protected:
+    void onTimeout() noexcept override
+    {
+    }
 };
 
 class APU: public Component
