@@ -267,9 +267,7 @@ void APU::runFrame()
 {
     assert(m_pBackend != nullptr);
 
-    const auto nClocks = bus().getMode() == OutputMode::NTSC ?
-                         divrnd(1789773u, 60u) :
-                         divrnd(1662607u, 50u);
+    const auto nClocks = bus().clocksPerFrame();
     const auto nRecvClocks = bus().getMode() == OutputMode::NTSC ?
                              divrnd(m_pBackend->getPlaybackFrequency(), 60u) :
                              divrnd(m_pBackend->getPlaybackFrequency(), 50u);

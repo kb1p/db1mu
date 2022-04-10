@@ -139,6 +139,8 @@ public:
 
     void saveState(const char *fileName);
     void loadState(const char *fileName);
+
+    int clocksPerFrame() const noexcept;
 };
 
 #endif

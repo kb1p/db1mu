@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <fstream>
+#include <cmath>
 
 void Bus::reset(OutputMode mode)
 {
@@ -73,14 +74,23 @@ void Bus::triggerNMI() noexcept
 
 static constexpr int PAL_FPS = 50,
                      NTSC_FPS = 60,
-                     PAL_LINE_CYCLES = 107,     // 106.56
                      PAL_NMI_LINES = 70,
-                     NTSC_LINE_CYCLES = 113,    // 113.33
                      NTSC_NMI_LINES = 20;
+
+static constexpr float PAL_LINE_CYCLES = 106.56f,
+                       NTSC_LINE_CYCLES = 113.33f;
+
+
+int Bus::clocksPerFrame() const noexcept
+{
+    const auto CPL = m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES;
+    const auto NMI_LINES = m_mode == OutputMode::PAL ? PAL_NMI_LINES : NTSC_NMI_LINES;
+    return std::lround((240 + NMI_LINES) * CPL);
+}
 
 void Bus::runFrame()
 {
-    const int CPL = m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES,
+    const int CPL = std::lround(m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES),
               NMI_LINES = m_mode == OutputMode::PAL ? PAL_NMI_LINES : NTSC_NMI_LINES;
 
     m_nFrame++;
