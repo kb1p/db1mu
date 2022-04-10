@@ -2,6 +2,7 @@
 #define APU_H
 
 #include "common.h"
+#include "bus.h"
 
 // Interface that wraps platform-dependent playback subsystem
 class PlaybackBackend
@@ -206,9 +207,41 @@ public:
 
 class NoiseChannel: public APUChannel
 {
+    static const uint PERIOD_MAP_PAL[16],
+                      PERIOD_MAP_NTSC[16];
+
+    OutputMode m_mode = OutputMode::NTSC;
+    Envelope m_envelope;
+    uint m_shift = 1u,
+         m_timerPeriod = 0u,
+         m_timerCnt = 0u;
+    bool m_loop = false;
+
 public:
-    void clockTimer() noexcept { }
-    uint sample() noexcept { return 0u; }
+    void setOutputMode(OutputMode m) noexcept
+    {
+        m_mode = m;
+        m_shift = 1u;
+    }
+
+    void setPeriod(uint period) noexcept
+    {
+        assert(period <= 0x0Fu);
+        m_timerPeriod = (m_mode == OutputMode::NTSC ? PERIOD_MAP_NTSC : PERIOD_MAP_PAL)[period];
+    }
+
+    void setLoop(bool loop) noexcept
+    {
+        m_loop = loop;
+    }
+
+    Envelope &envelope() noexcept
+    {
+        return m_envelope;
+    }
+
+    void clockTimer() noexcept;
+    uint sample() noexcept;
 };
 
 // DMC - Delta Modulation Channel

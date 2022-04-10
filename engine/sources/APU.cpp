@@ -1,6 +1,5 @@
 #include "APU.h"
 #include "log.h"
-#include "bus.h"
 
 #include <cassert>
 
@@ -157,15 +156,48 @@ uint TriangleChannel::sample() noexcept
     return SEQUENCER[m_seqIndex];
 }
 
+const uint NoiseChannel::PERIOD_MAP_PAL[16] = {
+    4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708,  944, 1890, 3778
+};
+
+const uint NoiseChannel::PERIOD_MAP_NTSC[16] = {
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+};
+
+void NoiseChannel::clockTimer() noexcept
+{
+    if (m_timerCnt-- == 0u)
+    {
+        m_timerCnt = m_timerPeriod;
+
+        // Update shift register
+        const auto mb = (m_shift >> (m_loop ? 6u : 1u)) & 0b01u;
+        const auto fb = ((m_shift & 0b01u) ^ mb) << 14u;
+        m_shift = ((m_shift >> 1u) & 0x3FFFu) | fb;
+    }
+}
+
+uint NoiseChannel::sample() noexcept
+{
+    uint rv = 0u;
+
+    if (lengthCounter() > 0u &&
+        (m_shift & 0b01u) == 0u)
+        rv = m_envelope.volume();
+
+    return rv;
+}
+
 c6502_byte_t APU::readRegister(c6502_word_t reg)
 {
     c6502_byte_t rv = 0;
     switch (reg)
     {
         case CTRL_STATUS:
-            rv |= m_pulse1.lengthCounter() > 0u ? 0b001u : 0u;
-            rv |= m_pulse2.lengthCounter() > 0u ? 0b010u : 0u;
-            rv |= m_tri.lengthCounter() > 0u ? 0b100u : 0u;
+            rv |= m_pulse1.lengthCounter() > 0u ? 0b0001u : 0u;
+            rv |= m_pulse2.lengthCounter() > 0u ? 0b0010u : 0u;
+            rv |= m_tri.lengthCounter() > 0u ? 0b0100u : 0u;
+            rv |= m_noise.lengthCounter() > 0u ? 0b1000u : 0u;
             break;
         default:
             Log::e("Attempt to read from illegal APU register 0x%X (returned zero)", reg);
@@ -260,6 +292,28 @@ void APU::writeRegister(c6502_word_t reg, c6502_byte_t val)
             m_tri.setLengthCounterLoad((val >> 3u) & 0b11111u);
             m_tri.setLinearCounterReloadFlag();
             break;
+        case NOIS_CTRL1:
+            {
+                auto &ev = m_noise.envelope();
+                if (val & 0b10000u)
+                    ev.setVolume(val & 0b1111u);
+                else
+                {
+                    ev.setVolume(Envelope::ENVELOPE_VOLUME);
+                    ev.setDividerPeriod((val & 0b1111u) + 1u);
+                }
+                ev.setLoop(val & 0b100000u);
+                m_noise.setLengthCounterHalt(val & 0b100000u);
+            }
+            break;
+        case NOIS_CTRL2:
+            m_noise.setLoop((0x10u & val) != 0u);
+            m_noise.setPeriod(val & 0x0Fu);
+            break;
+        case NOIS_FREQ:
+            m_noise.setLengthCounterLoad((val >> 3u) & 0b11111u);
+            m_noise.envelope().restart();
+            break;
     }
 }
 
@@ -296,9 +350,11 @@ void APU::runFrame()
                     m_pulse2.clockLengthCounter();
                     m_pulse2.clockSweep();
                     m_tri.clockLengthCounter();
+                    m_noise.clockLengthCounter();
                 }
                 m_pulse1.envelope().clock();
                 m_pulse2.envelope().clock();
+                m_noise.envelope().clock();
                 m_tri.clockLinearCounter();
 
                 // TODO: trigger IRQ
@@ -343,5 +399,6 @@ void APU::reset() noexcept
     m_pulse2.setEnabled(false);
     m_tri.setEnabled(false);
     m_noise.setEnabled(false);
+    m_noise.setOutputMode(bus().getMode());
     m_dmc.setEnabled(false);
 }
