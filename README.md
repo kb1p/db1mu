@@ -10,7 +10,6 @@ This is a NES emulator project that is aimed to be highly portable. The final go
 * Frontends: Qt5, SDL2 (with optional [ImGui Addons](https://github.com/Flix01/imgui) interface).
 
 ## To do
-* Implement APU emulation.
 * Extend the set of supported mappers.
 * Implement undocumented CPU instructions support.
 
