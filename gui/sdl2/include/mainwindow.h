@@ -73,6 +73,11 @@ public:
     void loadROM(const char *romFileName);
     void update();
     void handleEvent(const SDL_Event &evt);
+
+    int getRefreshRate() const noexcept
+    {
+        return m_bus.getMode() == OutputMode::NTSC ? 60 : 50;
+    }
 };
 
 #endif

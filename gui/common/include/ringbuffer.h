@@ -54,6 +54,21 @@ public:
         return m_size;
     }
 
+    bool isEmpty() const noexcept
+    {
+        return m_size == 0u;
+    }
+
+    bool isFull() const noexcept
+    {
+        return m_size == m_capacity;
+    }
+
+    void clear() noexcept
+    {
+        m_size = 0;
+    }
+
     void enqueue(T elem)
     {
         if (m_size == m_capacity)

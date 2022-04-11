@@ -3,13 +3,16 @@
 
 #include <APU.h>
 #include <SDL2/SDL.h>
-#include <vector>
+#include "ringbuffer.h"
 
 class SDLPlaybackBackend: public PlaybackBackend
 {
     SDL_AudioDeviceID m_devId = 0;
-    std::vector<float> m_sampleBuf;
+    RingBuffer<float> m_sampleBuf;
+    float m_lastSample = 0;
     uint m_frequency = 0u;
+
+    static void fillAudioBuffer(void *pUser, Uint8 *pBuf, int len) noexcept;
 
 public:
     ~SDLPlaybackBackend();

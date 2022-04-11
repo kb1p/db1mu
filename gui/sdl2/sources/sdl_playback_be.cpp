@@ -21,6 +21,8 @@ void SDLPlaybackBackend::init() noexcept
         reqFmt.format = AUDIO_F32;
         reqFmt.channels = 1;
         reqFmt.samples = 512;
+        reqFmt.callback = &SDLPlaybackBackend::fillAudioBuffer;
+        reqFmt.userdata = this;
 
         const auto n = SDL_GetNumAudioDevices(SDL_FALSE);
 
@@ -42,16 +44,37 @@ void SDLPlaybackBackend::init() noexcept
 
 void SDLPlaybackBackend::beginFrame(uint nSamples) noexcept
 {
+    SDL_LockAudioDevice(m_devId);
     m_sampleBuf.reserve(nSamples);
 }
 
 void SDLPlaybackBackend::queueSample(float v) noexcept
 {
-    m_sampleBuf.push_back(v);
+    m_lastSample = v;
+    if (m_sampleBuf.isFull())
+    {
+        m_sampleBuf.reserve(std::max(m_sampleBuf.capacity() * 2u, 1u));
+        Log::i("Audio: extended buffer size to %u", m_sampleBuf.capacity());
+    }
+    m_sampleBuf.enqueue(v);
 }
 
 void SDLPlaybackBackend::endFrame() noexcept
 {
-    SDL_QueueAudio(m_devId, m_sampleBuf.data(), m_sampleBuf.size() * 4);
-    m_sampleBuf.clear();
+    SDL_UnlockAudioDevice(m_devId);
+}
+
+void SDLPlaybackBackend::fillAudioBuffer(void *pUser, Uint8 *pBuf, int len) noexcept
+{
+    auto thiz = static_cast<SDLPlaybackBackend*>(pUser);
+    assert(len % 4 == 0);
+
+    const uint nReq = len / 4,
+               nHas = thiz->m_sampleBuf.size();
+    if (nHas > 0)
+        thiz->m_sampleBuf.dequeueRange(reinterpret_cast<float*>(pBuf), std::min(nReq, nHas));
+
+    // Fill the remaining gap with repeat of the last sample
+    for (uint off = nHas; off < nReq; off++)
+        *(reinterpret_cast<float*>(pBuf) + off) = thiz->m_lastSample;
 }

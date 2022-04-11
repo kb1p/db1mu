@@ -64,8 +64,7 @@ int main(int argc, char *argv[])
         if (!glCtx)
             throw "failed to create GLES context";
 
-        const bool manualDelay = SDL_GL_SetSwapInterval(1) < 0;
-
+        SDL_GL_SetSwapInterval(1);
         {
             MainWindow emuWin { win, glCtx };
 
@@ -74,10 +73,11 @@ int main(int argc, char *argv[])
             if (opts.romFileName)
                 emuWin.loadROM(opts.romFileName);
 
+            float remd = 0.0f;
             bool runLoop = true;
             while (runLoop)
             {
-                const auto t0 = SDL_GetTicks();
+                const auto t0 = SDL_GetPerformanceCounter();
                 SDL_Event evt;
                 while (SDL_PollEvent(&evt) != 0)
                 {
@@ -91,9 +91,16 @@ int main(int argc, char *argv[])
                 emuWin.update();
 
                 SDL_GL_SwapWindow(win);
-                const auto dt = SDL_GetTicks() - t0;
-                if (manualDelay && dt < 16)
-                    SDL_Delay(16 - dt);
+                const auto t1 = SDL_GetPerformanceCounter();
+                const float dt = (t1 - t0) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
+                const float frameTimeMs = 1000.0f / emuWin.getRefreshRate();
+                if (dt < frameTimeMs)
+                {
+                    const float d = frameTimeMs - dt + remd,
+                                id = std::floor(d);
+                    SDL_Delay(id);
+                    remd = d - id;
+                }
             }
         }
     }
