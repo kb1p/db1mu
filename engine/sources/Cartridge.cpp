@@ -53,7 +53,8 @@ void Cartrige::setMapper(uint8_t type,
                          int nVROMs,
                          int nRAMs)
 {
-    Log::i("[cart] mapper type = %u", type);
+    Log::i("[cart] mapper type = %u, # ROMs = %d, # CHRs = %d, # RAMs = %d",
+           type, nROMs, nVROMs, nRAMs);
 
     std::unique_ptr<Mapper> tmp;
     switch (type)
@@ -61,9 +62,9 @@ void Cartrige::setMapper(uint8_t type,
         case Mapper::Default:
             tmp.reset(new DefaultMapper { nROMs, nVROMs, nRAMs });
             break;
-        /*case Mapper::MMC1:
+        case Mapper::MMC1:
             tmp.reset(new MMC1 { nROMs, nVROMs, nRAMs });
-            break;*/
+            break;
         default:
             throw Exception(Exception::IllegalArgument,
                             "mapper type is not supported");

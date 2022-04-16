@@ -3,6 +3,15 @@
 
 #include "storage.h"
 
+enum class Mirroring
+{
+    SingleLower,
+    SingleUpper,
+    Horizontal,
+    Vertical,
+    FourScreen
+};
+
 class Mapper
 {
 public:
@@ -130,7 +139,47 @@ public:
         return m_nRAMs > 0;
     }
 
+    // Let mapper override
+    virtual Mirroring updateMirroring(Mirroring cur) noexcept
+    {
+        return cur;
+    }
+
 protected:
+    int numROMs() const noexcept
+    {
+        return m_nROMs;
+    }
+
+    int numVROMs() const noexcept
+    {
+        return m_nVROMs;
+    }
+
+    int numRAMs() const noexcept
+    {
+        return m_nRAMs;
+    }
+
+    ROM_BANK &romBank(int i) noexcept
+    {
+        assert(i >= 0 && i < m_nROMs);
+        return m_pROM[i];
+    }
+
+    VROM_BANK &vromBank(int i) noexcept
+    {
+        assert(i >= 0 && i < m_nVROMs);
+        return m_pVROM[i];
+    }
+
+    RAM_BANK &ramBank(int i) noexcept
+    {
+        assert(i >= 0 && i < m_nRAMs);
+        return m_pRAM[i];
+    }
+
+private:
     const int m_nROMs, m_nVROMs, m_nRAMs;
 
     ROM_BANK *m_pROM = nullptr;
@@ -138,13 +187,6 @@ protected:
     RAM_BANK *m_pRAM = nullptr;
 
     friend class Cartrige;
-};
-
-enum class Mirroring
-{
-    Horizontal,
-    Vertical,
-    FourScreen
 };
 
 class Cartrige
@@ -182,8 +224,11 @@ public:
 
     void setTrainer(const c6502_byte_t tr[512]);
 
-    Mirroring mirroring() const noexcept
+    Mirroring mirroring() noexcept
     {
+        assert(m_pMapper != nullptr);
+        m_mirr = m_pMapper->updateMirroring(m_mirr);
+
         return m_mirr;
     }
 

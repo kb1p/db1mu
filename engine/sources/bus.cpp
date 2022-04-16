@@ -282,7 +282,7 @@ void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
                 break;
             case Mirroring::Vertical:
                 m_vramNS.Write(addr ^ 0x800u, val);
-            case Mirroring::FourScreen:
+            default:
                 break;
         }
     }

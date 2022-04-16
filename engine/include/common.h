@@ -98,4 +98,86 @@ public:
     }
 };
 
+template <typename T>
+class Maybe
+{
+    T m_data;
+    bool m_isNothing = true;
+
+public:
+    Maybe() = default;
+    Maybe(T &&v):
+        m_data { std::forward<T>(v) },
+        m_isNothing { false }
+    {
+    }
+    Maybe(const Maybe&) = default;
+    Maybe(Maybe&&) = default;
+
+    Maybe &operator=(const Maybe &m) noexcept
+    {
+        m_isNothing = m.m_isNothing;
+        if (!m_isNothing)
+            m_data = m.m_data;
+
+        return *this;
+    }
+
+    Maybe &operator=(Maybe &&m) noexcept
+    {
+        m_isNothing = m.m_isNothing;
+        if (!m_isNothing)
+            m_data = std::move(m.m_data);
+
+        return *this;
+    }
+
+    Maybe &operator=(T &&v) noexcept
+    {
+        m_isNothing = false;
+        m_data = std::forward<T>(v);
+
+        return *this;
+    }
+
+    bool isNothing() const noexcept
+    {
+        return m_isNothing;
+    }
+
+    const T &value(const T &def) const noexcept
+    {
+        return m_isNothing ? def : m_data;
+    }
+
+    const T &value() const
+    {
+        if (m_isNothing)
+            throw Exception { Exception::IllegalOperation,
+                              "attempt to get value of nothing" };
+
+        return m_data;
+    }
+
+    void set(T &&v) noexcept
+    {
+        m_data = std::forward<T>(v);
+    }
+
+    void unset() noexcept
+    {
+        m_isNothing = true;
+    }
+
+    operator bool() const noexcept
+    {
+        return !m_isNothing;
+    }
+
+    operator const T&() const
+    {
+        return value();
+    }
+};
+
 #endif
