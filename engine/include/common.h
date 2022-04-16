@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <cassert>
+#include <string>
 
 typedef unsigned int uint;
 typedef uint8_t c6502_byte_t;
@@ -47,7 +48,6 @@ public:
     };
 
     Exception(Code code, const char *msg = nullptr);
-    virtual ~Exception();
 
     Code code() const
     {
@@ -56,12 +56,12 @@ public:
 
     const char *message() const
     {
-        return m_msg;
+        return m_msg.c_str();
     }
 
 private:
     Code m_code;
-    char *m_msg = nullptr;
+    std::string m_msg;
 };
 
 class Bus;

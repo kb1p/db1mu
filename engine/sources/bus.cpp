@@ -128,7 +128,7 @@ int Bus::currentTimeMs() const noexcept
 }
 
 // Memory request dispatching functions
-c6502_byte_t Bus::readMem(c6502_word_t addr)
+c6502_byte_t Bus::readMem(c6502_word_t addr) noexcept
 {
     c6502_byte_t rv = 0;
     switch (addr >> 13)
@@ -161,14 +161,20 @@ c6502_byte_t Bus::readMem(c6502_word_t addr)
             break;
         default:
             // Read from the cartridge
-            rv = m_pCart->mapper()->readROM(addr);
-            break;
+            try
+            {
+                rv = m_pCart->mapper()->readROM(addr);
+            }
+            catch (const Exception &ex)
+            {
+                Log::e("[bus] Failed to read cart's ROM: %s", ex.message());
+            }
     }
 
     return rv;
 }
 
-void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
+void Bus::writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
 {
     switch (addr >> 13)
     {
@@ -218,21 +224,38 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val)
             break;
         default:
             // To the cartridge mapper
-            m_pCart->mapper()->writeRAM(addr, val);
+            try
+            {
+                m_pCart->mapper()->writeRAM(addr, val);
+            }
+            catch (const Exception &ex)
+            {
+                Log::e("[bus] Failed to write to cart's memory: %s", ex.message());
+            }
     }
 }
 
 c6502_byte_t Bus::readVideoMem(c6502_word_t addr) const noexcept
 {
-    c6502_byte_t v;
+    c6502_byte_t v = 0u;
     if (addr >= 0x3F00u)
         v = m_vramPal.Read(addr & 0x1Fu);
     else if (addr >= 0x2000u)
         v = m_vramNS.Read(addr & 0xFFFu);
-    else if (m_pCart->mapper()->hasRAM())
-        v = m_pCart->mapper()->readRAM(addr);
     else
-        v = m_pCart->mapper()->readVROM(addr);
+    {
+        try
+        {
+            if (m_pCart->mapper()->hasRAM())
+                v = m_pCart->mapper()->readRAM(addr);
+            else
+                v = m_pCart->mapper()->readVROM(addr);
+        }
+        catch (const Exception &ex)
+        {
+            Log::e("[bus] Failed to read cart's RAM / VROM: %s", ex.message());
+        }
+    }
 
     return v;
 }
@@ -266,7 +289,14 @@ void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
     else
     {
         assert(m_pCart->mapper()->hasRAM());
-        m_pCart->mapper()->writeRAM(addr, val);
+        try
+        {
+            m_pCart->mapper()->writeRAM(addr, val);
+        }
+        catch (const Exception &ex)
+        {
+            Log::e("[bus] Failed to write to cart's RAM: %s", ex.message());
+        }
     }
 }
 

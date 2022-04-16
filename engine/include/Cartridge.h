@@ -182,7 +182,7 @@ public:
 
     void setTrainer(const c6502_byte_t tr[512]);
 
-    Mirroring mirroring() const
+    Mirroring mirroring() const noexcept
     {
         return m_mirr;
     }

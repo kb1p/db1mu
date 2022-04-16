@@ -2,19 +2,11 @@
 #include <new>
 #include <cstring>
 
-Exception::Exception(Exception::Code code, const char* msg):
+Exception::Exception(Exception::Code code, const char *msg):
     m_code(code)
 {
     if (msg)
-    {
-        m_msg = new(std::nothrow) char[strlen(msg) + 1];
-        if (m_msg)
-            strcpy(m_msg, msg);
-    }
+        m_msg.assign(msg);
+    else
+        m_msg.clear();
 }
-
-Exception::~Exception()
-{
-    delete[] m_msg;
-}
-

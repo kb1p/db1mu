@@ -1,5 +1,5 @@
 #include "loader.h"
-#include "mappers.h"
+#include "mappers/nrom.h"
 #include <cstring>
 #include <fstream>
 #include <cassert>

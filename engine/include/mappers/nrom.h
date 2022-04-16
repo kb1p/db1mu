@@ -1,5 +1,5 @@
-#ifndef __MAPPERS_H__
-#define __MAPPERS_H__
+#ifndef __NROM_H__
+#define __NROM_H__
 
 #include "Cartridge.h"
 
@@ -18,7 +18,7 @@ public:
      * force bank switching) so, despite the memory itself is r/o,
      * this operation with the mapper is legal.
      */
-    virtual void writeRAM(c6502_word_t addr, c6502_byte_t val) override;
+    void writeRAM(c6502_word_t addr, c6502_byte_t val) override;
 
     void flash(c6502_word_t addr, c6502_byte_t *p, c6502_d_word_t size);
 };

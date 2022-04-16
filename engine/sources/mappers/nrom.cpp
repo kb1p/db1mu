@@ -1,4 +1,4 @@
-#include "mappers.h"
+#include "mappers/nrom.h"
 
 c6502_byte_t DefaultMapper::readROM(c6502_word_t addr)
 {

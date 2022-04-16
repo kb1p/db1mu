@@ -120,8 +120,8 @@ public:
     void setGamePad(int n, Gamepad *pad) noexcept;
 
     // CPU address space memory requests dispatching functions
-    c6502_byte_t readMem(c6502_word_t addr);
-    void writeMem(c6502_word_t addr, c6502_byte_t val);
+    c6502_byte_t readMem(c6502_word_t addr) noexcept;
+    void writeMem(c6502_word_t addr, c6502_byte_t val) noexcept;
 
     // PPU address space access functions
     c6502_byte_t readVideoMem(c6502_word_t addr) const noexcept;

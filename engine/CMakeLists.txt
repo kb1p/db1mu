@@ -16,8 +16,9 @@ set(sources "sources/Cartridge.cpp"
             "sources/APU.cpp"
             "sources/bus.cpp"
             "sources/common.cpp"
-            "sources/loader.cpp"
-            "sources/mappers.cpp")
+            "sources/loader.cpp")
+
+file(GLOB mapper_sources "sources/mappers/*.cpp")
 
 if(BUILD_DEBUGGER)
     FIND_PACKAGE(BISON REQUIRED)
@@ -34,7 +35,7 @@ if(BUILD_DEBUGGER)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-add_library(b1-eng STATIC ${sources})
+add_library(b1-eng STATIC ${sources} ${mapper_sources})
 
 if(BUILD_DEBUGGER)
     target_link_libraries(b1-eng l pthread)

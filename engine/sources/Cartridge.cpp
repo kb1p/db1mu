@@ -1,4 +1,10 @@
 #include "Cartridge.h"
+#include "log.h"
+
+// Mappers
+#include "mappers/nrom.h"
+#include "mappers/mmc1.h"
+
 #include <algorithm>
 #include <memory>
 
@@ -42,19 +48,22 @@ void Cartrige::setTrainer(const c6502_byte_t tr[512])
     memcpy(m_pTrainer, tr, 512);
 }
 
-#include "mappers.h"
-
 void Cartrige::setMapper(uint8_t type,
                          int nROMs,
                          int nVROMs,
                          int nRAMs)
 {
+    Log::i("[cart] mapper type = %u", type);
+
     std::unique_ptr<Mapper> tmp;
     switch (type)
     {
         case Mapper::Default:
             tmp.reset(new DefaultMapper { nROMs, nVROMs, nRAMs });
             break;
+        /*case Mapper::MMC1:
+            tmp.reset(new MMC1 { nROMs, nVROMs, nRAMs });
+            break;*/
         default:
             throw Exception(Exception::IllegalArgument,
                             "mapper type is not supported");
