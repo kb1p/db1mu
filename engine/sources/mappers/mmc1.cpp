@@ -54,12 +54,20 @@ c6502_byte_t MMC1::readVROM(c6502_word_t addr)
     auto ind = m_curChr[0];
     if (m_modeChr == 1u)
     {
-        const auto i4 = addr < 0x1000u ? m_curChr[0] : m_curChr[1];
-        ind = i4 / 2;
-        if (i4 % 2 == 1 && addr < 0x1000u)
-            off += 0x1000u;
-        else if (i4 % 2 == 0 && addr >= 0x1000u)
-            off -= 0x1000u;
+        // 4K CHR bank mode. We store CHR ROMs in 8K banks so need
+        // to calculate bank index + offset
+        if (addr < 0x1000u)
+        {
+            ind = m_curChr[0] / 2;
+            if (m_curChr[0] % 2 == 1)
+                off += 0x1000u;
+        }
+        else
+        {
+            ind = m_curChr[1] / 2;
+            if (m_curChr[1] % 2 == 0)
+                off -= 0x1000u;
+        }
     }
 
     return vromBank(ind).Read(off);
