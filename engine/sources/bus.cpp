@@ -156,9 +156,6 @@ c6502_byte_t Bus::readMem(c6502_word_t addr) noexcept
                     break;
             }
             break;
-        case 3:
-            rv = m_wram.Read(addr & 0x1FFFu);
-            break;
         default:
             // Read from the cartridge
             try
@@ -218,9 +215,6 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
                     assert(m_pAPU != nullptr);
                     m_pAPU->writeRegister(addr & 0x1Fu, val);
             }
-            break;
-        case 3:
-            m_wram.Write(addr & 0x1FFFu, val);
             break;
         default:
             // To the cartridge mapper
@@ -332,7 +326,6 @@ void Bus::saveState(const char *fileName)
     m_spriteMem.Save(fout);
     m_vramNS.Save(fout);
     m_vramPal.Save(fout);
-    m_wram.Save(fout);
 
     // TODO: add mapper state
 }
@@ -359,7 +352,6 @@ void Bus::loadState(const char *fileName)
     m_spriteMem.Load(fin);
     m_vramNS.Load(fin);
     m_vramPal.Load(fin);
-    m_wram.Load(fin);
 
     // TODO: add mapper state
 }

@@ -8,8 +8,8 @@ c6502_byte_t MMC1::readROM(c6502_word_t addr)
     {
         case 0u:
         case 1u:
-            pBnkA = &romBank(m_curPrg & 0x0E);
-            pBnkB = &romBank((m_curPrg & 0x0E) + 1);
+            pBnkA = &romBank(m_curPrg);
+            pBnkB = &romBank(m_curPrg + 1);
             break;
         case 2u:
             pBnkA = &romBank(0);
@@ -50,9 +50,19 @@ c6502_byte_t MMC1::readVROM(c6502_word_t addr)
         throw Exception { Exception::IllegalArgument,
                          "illegal VROM address" };
 
-    // For not we only support 8k banks
-    assert(m_modeChr == 0u);
-    return vromBank(m_curChr[0]).Read(addr);
+    auto off = addr;
+    auto ind = m_curChr[0];
+    if (m_modeChr == 1u)
+    {
+        const auto i4 = addr < 0x1000u ? m_curChr[0] : m_curChr[1];
+        ind = i4 / 2;
+        if (i4 % 2 == 1 && addr < 0x1000u)
+            off += 0x1000u;
+        else if (i4 % 2 == 0 && addr >= 0x1000u)
+            off -= 0x1000u;
+    }
+
+    return vromBank(ind).Read(off);
 }
 
 Mirroring MMC1::updateMirroring(Mirroring cur) noexcept
@@ -75,22 +85,22 @@ void MMC1::writeRAM(c6502_word_t addr, c6502_byte_t val)
         // Write to MMC1 register
         if (val & 0x80u)
         {
-            m_shiftReg = 0u;
+            m_shiftReg = 0x10u;
 
             // Lock last 16kB ROM bank to 0xC000
             m_modePrg = 3;
         }
         else
         {
-            if (m_nWrites++ < 4)
-                m_shiftReg = (m_shiftReg << 1u) | (val & 0x01u);
-            else
+            // Check if shift register is full
+            const auto pv = (val << 4u) & 0x10u;
+            if (m_shiftReg & 0x01u)
             {
-                const auto finVal = (m_shiftReg << 1u) | (val & 0x01u);
-                writeRegister(addr & 0xE000u, finVal);
-                m_shiftReg = 0u;
-                m_nWrites = 0;
+                writeRegister(addr, pv | (m_shiftReg >> 1u));
+                m_shiftReg = 0x10u;
             }
+            else
+                m_shiftReg = pv | (m_shiftReg >> 1u);
         }
     }
     else
@@ -123,14 +133,14 @@ void MMC1::writeRegister(c6502_word_t addr, c6502_byte_t val)
     }
     else if (addr < 0xC000u)
         // CHR0 bank selector
-        m_curChr[0] = val & 0x1Fu;
+        m_curChr[0] = val & (m_modeChr == 0u ? 0x1Eu : 0x1Fu);
     else if (addr < 0xE000u)
         // CHR1 bank selector
         m_curChr[1] = val & 0x1Fu;
     else
     {
         // PRG bank
-        m_curPrg = val & 0xFu;
+        m_curPrg = val & (m_modePrg > 1u ? 0x0Fu : 0x0Eu);
 
         // TODO: MMC1A, MMC1B logic
     }

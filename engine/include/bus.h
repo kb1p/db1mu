@@ -35,9 +35,6 @@ class Bus
     // Video memory: palettes
     Storage<0x20> m_vramPal;
 
-    // Cartridge permanent RAM
-    Storage<0x2000> m_wram;
-
     // Sprite memory, addressed by sprite index (0..63)
     Storage<256> m_spriteMem;
 
