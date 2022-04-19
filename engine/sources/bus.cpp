@@ -160,7 +160,7 @@ c6502_byte_t Bus::readMem(c6502_word_t addr) noexcept
             // Read from the cartridge
             try
             {
-                rv = m_pCart->mapper()->readROM(addr);
+                rv = m_pCart->mapper()->readMem(addr);
             }
             catch (const Exception &ex)
             {
@@ -220,7 +220,7 @@ void Bus::writeMem(c6502_word_t addr, c6502_byte_t val) noexcept
             // To the cartridge mapper
             try
             {
-                m_pCart->mapper()->writeRAM(addr, val);
+                m_pCart->mapper()->writeMem(addr, val);
             }
             catch (const Exception &ex)
             {
@@ -240,10 +240,10 @@ c6502_byte_t Bus::readVideoMem(c6502_word_t addr) const noexcept
     {
         try
         {
-            if (m_pCart->mapper()->hasRAM())
-                v = m_pCart->mapper()->readRAM(addr);
+            if (m_pCart->mapper()->hasFeature<Mapper::RAM>())
+                v = m_pCart->mapper()->readMem(addr);
             else
-                v = m_pCart->mapper()->readVROM(addr);
+                v = m_pCart->mapper()->readVideoMem(addr);
         }
         catch (const Exception &ex)
         {
@@ -282,10 +282,10 @@ void Bus::writeVideoMem(c6502_word_t addr, c6502_byte_t val) noexcept
     }
     else
     {
-        assert(m_pCart->mapper()->hasRAM());
+        assert(m_pCart->mapper()->hasFeature<Mapper::RAM>());
         try
         {
-            m_pCart->mapper()->writeRAM(addr, val);
+            m_pCart->mapper()->writeMem(addr, val);
         }
         catch (const Exception &ex)
         {

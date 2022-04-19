@@ -18,15 +18,13 @@ class MMC1: public Mapper
     void writeRegister(c6502_word_t addr, c6502_byte_t val);
 
 public:
-    using Mapper::Mapper;
+    MMC1(int nROMs, int nVROMs, int nRAMs);
 
-    c6502_byte_t readROM(c6502_word_t addr) override;
+    c6502_byte_t readMem(c6502_word_t addr) override;
 
-    c6502_byte_t readRAM(c6502_word_t addr) override;
+    c6502_byte_t readVideoMem(c6502_word_t addr) override;
 
-    c6502_byte_t readVROM(c6502_word_t addr) override;
-
-    void writeRAM(c6502_word_t addr, c6502_byte_t val) override;
+    void writeMem(c6502_word_t addr, c6502_byte_t val) override;
 
     Mirroring updateMirroring(Mirroring cur) noexcept override;
 };

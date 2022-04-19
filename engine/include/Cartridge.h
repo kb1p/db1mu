@@ -2,6 +2,7 @@
 #define	CARTRIDGE_H
 
 #include "storage.h"
+#include <type_traits>
 
 enum class Mirroring
 {
@@ -102,6 +103,15 @@ public:
         HK_SF3 = 91
     };
 
+    enum Feature: uint
+    {
+        RAM = 0u,
+        NAMETABLE_MAPPING,
+        SOUND_GENERATION
+    };
+
+    using FeatSet = std::underlying_type<Feature>::type;
+
     // Bank sizes
     static constexpr c6502_d_word_t ROM_SIZE = 16 * 1024,
                                     VROM_SIZE = 8 * 1024,
@@ -111,32 +121,25 @@ public:
     typedef Storage<VROM_SIZE> VROM_BANK;
     typedef Storage<RAM_SIZE> RAM_BANK;
 
-    Mapper(int nROMs, int nVROMs, int nRAMs);
     virtual ~Mapper();
 
     void setROMBank(int n, const c6502_byte_t *p);
     void setVROMBank(int n, const c6502_byte_t *p);
 
-    virtual c6502_byte_t readROM(c6502_word_t addr) = 0;
+    virtual c6502_byte_t readMem(c6502_word_t addr) = 0;
 
-    virtual c6502_byte_t readRAM(c6502_word_t addr) = 0;
-
-    virtual c6502_byte_t readVROM(c6502_word_t addr) = 0;
+    virtual c6502_byte_t readVideoMem(c6502_word_t addr) = 0;
 
     /* N.B.: some addresses control mapper behaviour (i. e.
      * force bank switching) so, despite the memory itself is r/o,
      * this operation with the mapper is legal.
      */
-    virtual void writeRAM(c6502_word_t addr, c6502_byte_t val) = 0;
+    virtual void writeMem(c6502_word_t addr, c6502_byte_t val) = 0;
 
-    /* TODO: PPU has an addressing space separate from that of CPU,
-     * add routines for PPU reading / writing, e. g. readPPU(),
-     * writePPU().
-     */
-
-    bool hasRAM() const noexcept
+    template <Feature F>
+    bool hasFeature() const noexcept
     {
-        return m_nRAMs > 0;
+        return (m_feats & (1u << F)) != 0u;
     }
 
     // Let mapper override
@@ -146,6 +149,8 @@ public:
     }
 
 protected:
+    Mapper(int nROMs, int nVROMs, int nRAMs);
+
     int numROMs() const noexcept
     {
         return m_nROMs;
@@ -179,12 +184,25 @@ protected:
         return m_pRAM[i];
     }
 
+    template <Feature F>
+    void setFeature(bool b) noexcept
+    {
+        constexpr FeatSet fv = 1u << F;
+        if (b)
+            m_feats |= fv;
+        else
+            m_feats &= ~fv;
+    }
+
 private:
     const int m_nROMs, m_nVROMs, m_nRAMs;
 
     ROM_BANK *m_pROM = nullptr;
     VROM_BANK *m_pVROM = nullptr;
     RAM_BANK *m_pRAM = nullptr;
+
+    // Set of supported features
+    FeatSet m_feats = 0u;
 
     friend class Cartrige;
 };

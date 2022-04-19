@@ -60,7 +60,7 @@ void Cartrige::setMapper(uint8_t type,
     switch (type)
     {
         case Mapper::Default:
-            tmp.reset(new DefaultMapper { nROMs, nVROMs, nRAMs });
+            tmp.reset(new DefaultMapper { nROMs, nVROMs });
             break;
         case Mapper::MMC1:
             tmp.reset(new MMC1 { nROMs, nVROMs, nRAMs });

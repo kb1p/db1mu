@@ -1,50 +1,36 @@
 #include "mappers/mmc1.h"
 
-c6502_byte_t MMC1::readROM(c6502_word_t addr)
+MMC1::MMC1(int nROMs, int nVROMs, int nRAMs):
+    Mapper { nROMs, nVROMs, nRAMs }
 {
-    ROM_BANK *pBnkA = nullptr,
-             *pBnkB = nullptr;
-    switch (m_modePrg)
-    {
-        case 0u:
-        case 1u:
-            pBnkA = &romBank(m_curPrg);
-            pBnkB = &romBank(m_curPrg + 1);
-            break;
-        case 2u:
-            pBnkA = &romBank(0);
-            pBnkB = &romBank(m_curPrg);
-            break;
-        case 3u:
-            pBnkA = &romBank(m_curPrg);
-            pBnkB = &romBank(numROMs() - 1);
-            break;
-    }
-
-    assert(pBnkA != nullptr && pBnkB != nullptr);
-
-    // Switchable banks
-    if (addr >= 0xC000u)
-        return pBnkB->Read(addr - 0xC000u);
-    else if (addr >= 0x8000u)
-        return pBnkA->Read(addr - 0x8000u);
-    else
-        throw Exception(Exception::IllegalArgument,
-                        "illegal ROM address");
+    setFeature<RAM>(nRAMs > 0);
 }
 
-c6502_byte_t MMC1::readRAM(c6502_word_t addr)
+c6502_byte_t MMC1::readMem(c6502_word_t addr)
 {
-    if (addr >= 0x6000u && addr <= 0x7FFFu && numRAMs() >= 1)
+    if (addr >= 0xC000u)
+    {
+        auto &bh = romBank(m_modePrg == 3u ? numROMs() - 1  :
+                           m_modePrg == 2u ? m_curPrg       :
+                           m_curPrg + 1);
+        return bh.Read(addr - 0xC000u);
+    }
+    else if (addr >= 0x8000u)
+    {
+        auto &bl = romBank(m_modePrg == 2u ? 0 :
+                           m_curPrg);
+        return bl.Read(addr - 0x8000u);
+    }
+    else if (addr >= 0x6000u && numRAMs() >= 1)
     {
         return ramBank(0).Read(addr - 0x6000u);
     }
     else
-        throw Exception { Exception::IllegalOperation,
-                          "this MMC1 controller has no RAM" };
+        throw Exception(Exception::IllegalArgument,
+                        "illegal mapper memory address");
 }
 
-c6502_byte_t MMC1::readVROM(c6502_word_t addr)
+c6502_byte_t MMC1::readVideoMem(c6502_word_t addr)
 {
     if (addr >= 0x2000u)
         throw Exception { Exception::IllegalArgument,
@@ -78,7 +64,7 @@ Mirroring MMC1::updateMirroring(Mirroring cur) noexcept
     return m_mirrOverride.value(cur);
 }
 
-void MMC1::writeRAM(c6502_word_t addr, c6502_byte_t val)
+void MMC1::writeMem(c6502_word_t addr, c6502_byte_t val)
 {
     if (addr >= 0x6000u && addr < 0x8000u)
     {

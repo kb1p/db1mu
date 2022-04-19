@@ -1,6 +1,6 @@
 #include "mappers/nrom.h"
 
-c6502_byte_t DefaultMapper::readROM(c6502_word_t addr)
+c6502_byte_t DefaultMapper::readMem(c6502_word_t addr)
 {
     if (addr >= 0xC000)
         // Fixed bank
@@ -10,16 +10,10 @@ c6502_byte_t DefaultMapper::readROM(c6502_word_t addr)
         return romBank(0).Read(addr - 0x8000);
     else
         throw Exception(Exception::IllegalArgument,
-                        "illegal ROM address");
+                        "illegal memory address");
 }
 
-c6502_byte_t DefaultMapper::readRAM(c6502_word_t addr)
-{
-    throw Exception(Exception::IllegalOperation,
-                    "default mapper has no RAM");
-}
-
-c6502_byte_t DefaultMapper::readVROM(c6502_word_t addr)
+c6502_byte_t DefaultMapper::readVideoMem(c6502_word_t addr)
 {
     assert(numVROMs() == 1);
     assert(addr < 0x2000u);
@@ -28,7 +22,7 @@ c6502_byte_t DefaultMapper::readVROM(c6502_word_t addr)
     return vromBank(0).Read(addr);
 }
 
-void DefaultMapper::writeRAM(c6502_word_t, c6502_byte_t)
+void DefaultMapper::writeMem(c6502_word_t, c6502_byte_t)
 {
     throw Exception(Exception::IllegalOperation,
                     "default mapper has no RAM");
