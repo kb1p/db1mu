@@ -10,7 +10,7 @@ class MMC1: public Mapper
 {
     uint m_shiftReg = 10u,
          m_modeChr = 0u,
-         m_modePrg = 0u;
+         m_modePrg = 3u;
     int m_curChr[2] = { 0, 0 },
         m_curPrg = 0;
     Maybe<Mirroring> m_mirrOverride;
