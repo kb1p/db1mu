@@ -51,6 +51,7 @@ class Bus
     OutputMode m_mode;
 
     int m_nFrame = 0;
+    float m_remClk = 0.0f;
 
 public:
     Bus(OutputMode m):

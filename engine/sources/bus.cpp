@@ -26,6 +26,7 @@ void Bus::reset(OutputMode mode)
     m_pAPU->reset();
 
     m_nFrame = 0;
+    m_remClk = 0.0f;
 }
 
 void Bus::injectCartrige(Cartrige *cart)
@@ -68,7 +69,8 @@ void Bus::triggerNMI() noexcept
     // Sending of NMI signal from PPU to CPU takes 7 clocks.
     // At this time CPU is still running and VBLANK flag is
     // already set.
-    m_pCPU->run(7);
+    // We borrow these 7 clocks.
+    m_remClk = m_remClk - m_pCPU->run(static_cast<int>(7 + m_remClk));
     m_pCPU->NMI();
 }
 
@@ -90,8 +92,8 @@ int Bus::clocksPerFrame() const noexcept
 
 void Bus::runFrame()
 {
-    const int CPL = std::lround(m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES),
-              NMI_LINES = m_mode == OutputMode::PAL ? PAL_NMI_LINES : NTSC_NMI_LINES;
+    const float CPL = m_mode == OutputMode::PAL ? PAL_LINE_CYCLES : NTSC_LINE_CYCLES;
+    const int NMI_LINES = m_mode == OutputMode::PAL ? PAL_NMI_LINES : NTSC_NMI_LINES;
 
     m_nFrame++;
 
@@ -101,7 +103,9 @@ void Bus::runFrame()
     for (int i = 0; i < 240; i++)
     {
         m_pPPU->drawNextLine();
-        m_pCPU->run(CPL);
+
+        const float lc = CPL + m_remClk;
+        m_remClk = lc - m_pCPU->run(static_cast<int>(lc));
     }
 
     m_pPPU->endFrame();
@@ -114,7 +118,10 @@ void Bus::runFrame()
 
     // PPU is opened for writinng only during VSYNC
     for (int i = 0; i < NMI_LINES; i++)
-        m_pCPU->run(CPL);
+    {
+        const float lc = CPL + m_remClk;
+        m_remClk = lc - m_pCPU->run(static_cast<int>(lc));
+    }
 
     m_pPPU->onEndVblank();
 
