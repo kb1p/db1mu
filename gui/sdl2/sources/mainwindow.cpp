@@ -79,7 +79,13 @@ void MainWindow::update()
 {
     if (m_bus.getCartrige())
     {
-        m_bus.runFrame();
+        // If running emulation, perform a full frame iteration,
+        // otherwise just repeat the last frame.
+        if (!m_isPaused || m_doStep)
+            m_bus.runFrame();
+        else
+            m_RBE.draw();
+        m_doStep = false;
     }
     else
     {
@@ -102,7 +108,22 @@ void MainWindow::handleEvent(const SDL_Event &evt)
     {
         case SDL_KEYUP:
         case SDL_KEYDOWN:
+            if ((evt.key.keysym.mod & KMOD_CTRL) && evt.key.state == SDL_PRESSED)
             {
+                // Handle shortcuts
+                switch (evt.key.keysym.scancode)
+                {
+                    case SDL_SCANCODE_P:
+                        m_isPaused = !m_isPaused;
+                        break;
+                    case SDL_SCANCODE_S:
+                        m_doStep = true;
+                        break;
+                }
+            }
+            else
+            {
+                // Handle gamepad mapped keys
                 const auto key = evt.key.keysym.scancode;
                 const bool pressed = evt.key.state == SDL_PRESSED;
                 auto i = std::find_if(std::begin(m_keyMapLeft),
@@ -147,6 +168,7 @@ void MainWindow::handleUI()
     // Render actions
     bool cmdOpenROM = false,
          cmdQuit = false;
+
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("File"))
@@ -156,6 +178,14 @@ void MainWindow::handleUI()
             cmdQuit = ImGui::MenuItem("Exit");
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Emulation"))
+        {
+            ImGui::MenuItem("Pause", "Ctrl+P", &m_isPaused);
+            if (ImGui::MenuItem("Step", "Ctrl+S"))
+                m_doStep = true;
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 

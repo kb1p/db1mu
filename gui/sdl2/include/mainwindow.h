@@ -34,7 +34,8 @@ class MainWindow
     GLFunctionsWrapper m_glFuncWrp;
     GLRenderingBackend<GLFunctionsWrapper> m_RBE;
     SDLPlaybackBackend m_audioBE;
-    bool ready = false;
+    bool m_isPaused = false,
+         m_doStep = false;
 
     KeyMap m_keyMapLeft[10] = {
          { SDL_SCANCODE_W,   Button::UP,     false },
