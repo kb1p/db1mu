@@ -79,9 +79,8 @@ static constexpr int PAL_FPS = 50,
                      PAL_NMI_LINES = 70,
                      NTSC_NMI_LINES = 20;
 
-static constexpr float PAL_LINE_CYCLES = 106.56f,
-                       NTSC_LINE_CYCLES = 113.33f;
-
+static constexpr float PAL_LINE_CYCLES = 106.0f + 9.0f / 16.0f,
+                       NTSC_LINE_CYCLES = 113.0f + 2.0f / 3.0f;
 
 int Bus::clocksPerFrame() const noexcept
 {
