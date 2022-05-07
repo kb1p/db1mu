@@ -18,6 +18,10 @@ Mapper::Mapper(int nROMs, int nVROMs, int nRAMs):
         m_pVROM = new VROM_BANK[nVROMs];
     if (nRAMs > 0)
         m_pRAM = new RAM_BANK[nRAMs];
+
+    const int prgSz = nROMs * ROM_SIZE / 1024,
+              chrSz = nVROMs * VROM_SIZE / 1024;
+    Log::d("[mapper] PRG ROM size = %d kB, CHR ROM size = %d kB", prgSz, chrSz);
 }
 
 Mapper::~Mapper()
