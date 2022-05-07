@@ -261,28 +261,28 @@ void PPU::drawNextLine() noexcept
         {
             for (int c = 0; c < 33; c++)
             {
-                if (!m_st.fullBacgroundVisible && c == 0)
-                    continue;
+                if (m_st.fullBacgroundVisible || c > 0)
+                {
+                    // Read character index from character area
+                    const c6502_word_t charAddr = 0x2000u | (m_st.vramAddr & 0x0FFFu);
+                    const auto charNum = bus().readVideoMem(charAddr);
 
-                // Read character index from character area
-                const c6502_word_t charAddr = 0x2000u | (m_st.vramAddr & 0x0FFFu);
-                const auto charNum = bus().readVideoMem(charAddr);
+                    // Read color information from attribute area
+                    const c6502_word_t attrAddr = 0x23C0u |
+                                                (m_st.vramAddr & 0b110000000000u) |
+                                                ((m_st.vramAddr >> 4u) & 0b111000u) |
+                                                ((m_st.vramAddr >> 2u) & 0b111u);
+                    const auto clrGrp = bus().readVideoMem(attrAddr);
+                    const auto offInGrp = ((m_st.vramAddr >> 5u) & 0b10u) |
+                                        ((m_st.vramAddr >> 1u) & 0b01u);
+                    const c6502_byte_t clrHi = (clrGrp >> offInGrp * 2u) & 0b11u;
 
-                // Read color information from attribute area
-                const c6502_word_t attrAddr = 0x23C0u |
-                                            (m_st.vramAddr & 0b110000000000u) |
-                                            ((m_st.vramAddr >> 4u) & 0b111000u) |
-                                            ((m_st.vramAddr >> 2u) & 0b111u);
-                const auto clrGrp = bus().readVideoMem(attrAddr);
-                const auto offInGrp = ((m_st.vramAddr >> 5u) & 0b10u) |
-                                    ((m_st.vramAddr >> 1u) & 0b01u);
-                const c6502_byte_t clrHi = (clrGrp >> offInGrp * 2u) & 0b11u;
-
-                // Load character / attribute data
-                const c6502_word_t x = c * 8u;
-                assert(x <= 256u);
-                readCharacterLine(lnData + x, charNum, fineY, m_st.baBkgnd, false, false);
-                expandColor(lnData + x, clrHi, PAL_BG);
+                    // Load character / attribute data
+                    const c6502_word_t x = c * 8u;
+                    assert(x <= 256u);
+                    readCharacterLine(lnData + x, charNum, fineY, m_st.baBkgnd, false, false);
+                    expandColor(lnData + x, clrHi, PAL_BG);
+                }
 
                 m_st.vramAddr = incrWrpAddrHorz(m_st.vramAddr);
             }
