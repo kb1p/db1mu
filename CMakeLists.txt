@@ -4,6 +4,7 @@ project(b1mulator)
 
 option(BUILD_DEBUGGER "Build command line-based debugger" OFF)
 set(FRONTEND_TYPE "SDL" CACHE STRING "Which frontend to use [SDL, QT, NONE]")
+set(RENDERER_TYPE "GLES" CACHE STRING "Which renderer to use [GLES, Vulkan]")
 
 include_directories("engine/include")
 
@@ -14,6 +15,13 @@ add_subdirectory("engine")
 
 if(BUILD_DEBUGGER)
     add_subdirectory("bin")
+endif()
+
+if(RENDERER_TYPE STREQUAL "Vulkan")
+    message(">>> Using Vulkan renderer")
+    add_definitions(-DUSE_VULKAN)
+else()
+    message(">>> Using GLES renderer")
 endif()
 
 if(FRONTEND_TYPE STREQUAL "QT")

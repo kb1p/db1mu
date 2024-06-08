@@ -20,6 +20,10 @@ include_directories("include"
 file(GLOB sources "sources/*.cpp")
 file(GLOB headers "include/*.h")
 
+if(RENDERER_TYPE STREQUAL "Vulkan")
+    list(APPEND sources "../common/vkrbe.cpp")
+endif()
+
 if(USE_IMGUI)
     add_definitions(-DUSE_IMGUI -DIMGUI_IMPL_OPENGL_ES2 -DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
     include_directories("third_party/imgui"

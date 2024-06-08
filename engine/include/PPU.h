@@ -15,6 +15,13 @@ protected:
 
     RenderingBackend() = default;
 
+    // Helper function to set line to a RGBA buffer using default settings.
+    // Make sure the buffer has enough space.
+    static void setLineToBuf(uint8_t *dst,
+                             const int n,
+                             const c6502_byte_t *pColorData,
+                             const c6502_byte_t bgColor);
+
 public:
     RenderingBackend(const RenderingBackend&) = delete;
     RenderingBackend(RenderingBackend&&) = delete;
@@ -25,8 +32,8 @@ public:
     virtual ~RenderingBackend() = default;
 
     virtual void setLine(const int n,
-                            const c6502_byte_t *pColorData,
-                            const c6502_byte_t bgColor) = 0;
+                         const c6502_byte_t *pColorData,
+                         const c6502_byte_t bgColor) = 0;
     virtual void draw() = 0;
 };
 

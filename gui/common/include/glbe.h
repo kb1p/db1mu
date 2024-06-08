@@ -158,21 +158,7 @@ void GLRenderingBackend<IGL>::setLine(const int n,
                                       const c6502_byte_t *pColorData,
                                       const c6502_byte_t bgColor)
 {
-    assert(pColorData != nullptr);
-
-    // Convert NES character (NES palette) into tile (RGB palette)
-    auto *pDest = m_texData + (TEX_HEIGHT - 1 - n) * TEX_WIDTH * 4;
-    for (int i = 0; i < TEX_WIDTH; i++, pDest += 4)
-    {
-        const auto c = pColorData[i] != PPU::TRANSPARENT_PXL ? (pColorData[i] & 0x3Fu) : bgColor;
-        assert(c < 64);
-        const auto s = s_palette[c];
-        constexpr unsigned b5m = 0b11111u;
-        pDest[0] = static_cast<uint8_t>(divrnd(((s >> 10) & b5m) * 255, 31));
-        pDest[1] = static_cast<uint8_t>(divrnd(((s >> 5) & b5m) * 255, 31));
-        pDest[2] = static_cast<uint8_t>(divrnd((s & b5m) * 255, 31));
-        pDest[3] = 255u;
-    }
+    setLineToBuf(m_texData, n, pColorData, bgColor);
 }
 
 template <typename IGL>
