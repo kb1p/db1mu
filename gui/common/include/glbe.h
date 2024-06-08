@@ -7,7 +7,7 @@
 #include <cassert>
 
 template <typename IGL>
-class GLRenderingBackend: public RenderingBackend
+class GLRenderingBackend final: public RenderingBackend
 {
     enum Attributes: GLuint
     {
@@ -40,6 +40,7 @@ public:
                  const c6502_byte_t *pColorData,
                  const c6502_byte_t bgColor) override;
     void draw() override;
+    void drawError() override;
 };
 
 template <typename IGL>
@@ -182,6 +183,13 @@ void GLRenderingBackend<IGL>::draw()
     m_gl->glVertexAttribPointer(ATTR_OFFSET, 2, GL_FLOAT, GL_TRUE, 0, nullptr);
     m_gl->glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     m_gl->glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+template <typename IGL>
+void GLRenderingBackend<IGL>::drawError()
+{
+    m_gl->glClearColor(1, 1, 1, 1);
+    m_gl->glClear(GL_COLOR_BUFFER_BIT);
 }
 
 #endif

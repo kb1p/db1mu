@@ -4,11 +4,6 @@ option(USE_IMGUI "Use third-party ImGui library (with file dialogs addon) to pro
 
 find_package(SDL2 REQUIRED)
 
-set(GLES_HDR_PATH "$ENV{KHRONOS_HEADERS}" CACHE STRING "Additional directory to search for GLES header files")
-set(GLES_LIB_PATH "$ENV{OPENGLES_LIBDIR}" CACHE STRING "Additional directory to search for GLES libraries")
-
-find_library(GLES_LIBS NAMES "GLESv2" "GLESv3" HINTS ${GLES_LIB_PATH})
-
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories("include"
                     "../common/include"
@@ -20,8 +15,20 @@ include_directories("include"
 file(GLOB sources "sources/*.cpp")
 file(GLOB headers "include/*.h")
 
-if(RENDERER_TYPE STREQUAL "Vulkan")
-    list(APPEND sources "../common/vkrbe.cpp")
+if(USE_VULKAN)
+    find_package(Vulkan REQUIRED)
+
+    set(renderer_libs ${Vulkan_LIBRARIES})
+    include_directories(${Vulkan_INCLUDE_DIRS})
+
+    list(APPEND sources "../common/sources/vkrbe.cpp")
+else()
+    set(GLES_HDR_PATH "$ENV{KHRONOS_HEADERS}" CACHE STRING "Additional directory to search for GLES header files")
+    set(GLES_LIB_PATH "$ENV{OPENGLES_LIBDIR}" CACHE STRING "Additional directory to search for GLES libraries")
+
+    include_directories(${GLES_HDR_PATH})
+
+    find_library(renderer_libs NAMES "GLESv2" "GLESv3" HINTS ${GLES_LIB_PATH})
 endif()
 
 if(USE_IMGUI)
@@ -31,16 +38,23 @@ if(USE_IMGUI)
                         "third_party/imgui/addons")
     file(GLOB imgui_src "third_party/imgui/*.cpp")
     list(APPEND sources ${imgui_src})
-    list(APPEND sources "third_party/imgui/backends/imgui_impl_opengl3.cpp"
-                        "third_party/imgui/backends/imgui_impl_sdl.cpp"
+    list(APPEND sources "third_party/imgui/backends/imgui_impl_sdl.cpp"
                         "third_party/imgui/addons/imguifilesystem/imguifilesystem.cpp")
+    if(RENDERER_TYPE STREQUAL "Vulkan")
+        list(APPEND sources "third_party/imgui/backends/imgui_impl_vulkan.cpp")
+    else()
+        list(APPEND sources "third_party/imgui/backends/imgui_impl_opengl3.cpp")
+    endif()
     message(">>> Using ImGui")
 endif()
 
 message(">>> Frontend sources: ${sources}")
 
 add_executable(b1mulator ${sources})
+target_link_libraries(b1mulator b1-eng ${SDL2_LIBRARIES} ${renderer_libs})
 
-target_link_libraries(b1mulator b1-eng ${SDL2_LIBRARIES} ${GLES_LIBS})
+if(USE_VULKAN)
+    add_dependencies(b1mulator compile_shaders)
+endif()
 
 install(TARGETS b1mulator DESTINATION "bin")

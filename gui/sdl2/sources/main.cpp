@@ -35,7 +35,13 @@ int main(int argc, char *argv[])
 {
     int rc = 0;
     SDL_Window *win = { };
+
+#ifdef USE_VULKAN
+    constexpr auto backendFlag = SDL_WINDOW_VULKAN;
+#else
+    constexpr auto backendFlag = SDL_WINDOW_OPENGL;
     SDL_GLContext glCtx = { };
+#endif
     try
     {
         auto opts = parseArguments(argc - 1, argv + 1);
@@ -53,20 +59,26 @@ int main(int argc, char *argv[])
                                SDL_WINDOWPOS_UNDEFINED,
                                640,
                                480,
-                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+                               backendFlag | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         if (!win)
             throw "failed to create SDL window";
 
         if (opts.fullScreen)
             SDL_SetWindowFullscreen(win, SDL_WINDOW_FULLSCREEN);
 
+#ifndef USE_VULKAN
         glCtx = SDL_GL_CreateContext(win);
         if (!glCtx)
             throw "failed to create GLES context";
+#endif
 
         SDL_GL_SetSwapInterval(1);
         {
+#ifdef USE_VULKAN
+            MainWindow emuWin { win };
+#else
             MainWindow emuWin { win, glCtx };
+#endif
 
             // Rendering state setup
             emuWin.initialize();
@@ -104,6 +116,16 @@ int main(int argc, char *argv[])
             }
         }
     }
+    catch (const std::runtime_error &err)
+    {
+        std::string fullMsg = "Renderer error: ";
+        fullMsg += err.what();
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                 "Error",
+                                 fullMsg.c_str(),
+                                 win);
+        rc = 1;
+    }
     catch (const char *msg)
     {
         std::string fullMsg = "Initialization error: ";
@@ -115,8 +137,11 @@ int main(int argc, char *argv[])
         rc = 1;
     }
 
+#ifndef USE_VULKAN
     if (glCtx)
         SDL_GL_DeleteContext(glCtx);
+#endif
+
     if (win)
         SDL_DestroyWindow(win);
     SDL_Quit();

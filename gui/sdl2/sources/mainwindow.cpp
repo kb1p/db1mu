@@ -4,33 +4,41 @@
 #include <loader.h>
 #include <algorithm>
 #include <iostream>
+#include <vector>
+#include <stdexcept>
 
 #ifdef USE_IMGUI
 #include <imgui.h>
-#include <imgui_impl_opengl3.h>
+    #ifdef USE_VULKAN
+        #include <imgui_impl_vulkan.h>
+    #else
+        #include <imgui_impl_opengl3.h>
+    #endif
 #include <imgui_impl_sdl.h>
 #include <imguifilesystem/imguifilesystem.h>
 #endif
 
-MainWindow::MainWindow(SDL_Window *win, SDL_GLContext glCtx):
+using std::runtime_error;
+
+#ifdef USE_VULKAN
+MainWindow::MainWindow(SDL_Window *win):
     m_sdlWin { win }
-{
-#ifdef USE_IMGUI
-    // ImGUI initialization
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForOpenGL(win, glCtx);
-    ImGui_ImplOpenGL3_Init();
-    ImGui::GetIO();
+#else
+MainWindow::MainWindow(SDL_Window *win, SDL_GLContext glCtx):
+    m_sdlWin { win },
+    m_glCtx { glCtx }
 #endif
+{
 }
 
 MainWindow::~MainWindow()
 {
 #ifdef USE_IMGUI
-    // ImGUI initialization
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
+    #ifdef USE_VULKAN
+    #else
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplSDL2_Shutdown();
+    #endif
     ImGui::DestroyContext();
 #endif
 }
@@ -42,7 +50,45 @@ void MainWindow::initialize()
     logCfg.filter = Log::LEVEL_DEBUG;
     logCfg.autoFlush = true;
 
+#ifdef USE_VULKAN
+    unsigned int extensionCount = 0;
+    std::vector<const char*> reqExts;
+    SDL_Vulkan_GetInstanceExtensions(m_sdlWin, &extensionCount, nullptr);
+    reqExts.resize(extensionCount);
+    SDL_Vulkan_GetInstanceExtensions(m_sdlWin, &extensionCount, reqExts.data());
+
+    #ifndef NDEBUG
+        reqExts.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    #endif
+
+    m_RBE.init(reqExts.size(), reqExts.data());
+
+    VkSurfaceKHR surf;
+    if (!SDL_Vulkan_CreateSurface(m_sdlWin, m_RBE.instance(), &surf))
+        throw runtime_error { "failed to create SDL Surface for Vulkan" };
+
+    int winW = 0, winH = 0;
+    SDL_Vulkan_GetDrawableSize(m_sdlWin, &winW, &winH);
+    m_RBE.resize(winW, winH);
+
+    // Rendering state setup
+    m_RBE.setupOutput(surf);
+#else
     m_RBE.init(&m_glFuncWrp);
+#endif
+
+#ifdef USE_IMGUI
+    // ImGUI initialization
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    #ifdef USE_VULKAN
+    #else
+        ImGui_ImplSDL2_InitForOpenGL(m_sdlWin, m_glCtx);
+        ImGui_ImplOpenGL3_Init();
+    #endif
+    ImGui::GetIO();
+#endif
+
     m_ppu.setBackend(&m_RBE);
 
     m_apu.setBackend(&m_audioBE);
@@ -89,8 +135,7 @@ void MainWindow::update()
     }
     else
     {
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
+        m_RBE.drawError();
     }
 
 #ifdef USE_IMGUI
@@ -161,7 +206,10 @@ void MainWindow::handleUI()
 {
     // Draw ImGui stuff
     auto &imGuiIO = ImGui::GetIO();
+#ifdef USE_VULKAN
+#else
     ImGui_ImplOpenGL3_NewFrame();
+#endif
     ImGui_ImplSDL2_NewFrame(m_sdlWin);
     ImGui::NewFrame();
 
@@ -221,7 +269,10 @@ void MainWindow::handleUI()
     }
 
     ImGui::Render();
+#ifdef USE_VULKAN
+#else
     glViewport(0, 0, (int)imGuiIO.DisplaySize.x, (int)imGuiIO.DisplaySize.y);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
 }
 #endif

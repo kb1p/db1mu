@@ -35,6 +35,7 @@ public:
                          const c6502_byte_t *pColorData,
                          const c6502_byte_t bgColor) = 0;
     virtual void draw() = 0;
+    virtual void drawError() = 0;
 };
 
 class PPU: public Component
