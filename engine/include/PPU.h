@@ -3,10 +3,16 @@
 
 #include "storage.h"
 
-/// Interface that must be implemented using a concrete rendering system (e.g. Open GL ES)
+/// Abstract class that must be implemented using a concrete rendering system (e.g. Open GL ES)
 class RenderingBackend
 {
 protected:
+    static constexpr int TEX_WIDTH = 256,
+                         TEX_HEIGHT = 240;
+
+    // NES to RGB
+    static const uint32_t s_palette[64];
+
     RenderingBackend() = default;
 
 public:
