@@ -40,7 +40,7 @@ public:
                  const c6502_byte_t *pColorData,
                  const c6502_byte_t bgColor) override;
     void draw() override;
-    void drawError() override;
+    void drawIdle() override;
 };
 
 template <typename IGL>
@@ -186,7 +186,7 @@ void GLRenderingBackend<IGL>::draw()
 }
 
 template <typename IGL>
-void GLRenderingBackend<IGL>::drawError()
+void GLRenderingBackend<IGL>::drawIdle()
 {
     m_gl->glClearColor(1, 1, 1, 1);
     m_gl->glClear(GL_COLOR_BUFFER_BIT);

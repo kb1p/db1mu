@@ -20,6 +20,19 @@
 
 using std::runtime_error;
 
+#if defined(USE_VULKAN) && defined(USE_IMGUI)
+static void checkVkResult(VkResult err)
+{
+    if (err == 0)
+        return;
+
+    Log::e("[Vulkan][ImGUI] Error: VkResult = %d", err);
+
+    if (err < 0)
+        throw runtime_error { "ImGUI Vulkan backend error" };
+}
+#endif
+
 #ifdef USE_VULKAN
 MainWindow::MainWindow(SDL_Window *win):
     m_sdlWin { win }
@@ -35,10 +48,12 @@ MainWindow::~MainWindow()
 {
 #ifdef USE_IMGUI
     #ifdef USE_VULKAN
+        m_RBE.waitDeviceIdle();
+        ImGui_ImplVulkan_Shutdown();
     #else
         ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplSDL2_Shutdown();
     #endif
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 #endif
 }
@@ -82,6 +97,31 @@ void MainWindow::initialize()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     #ifdef USE_VULKAN
+        ImGui_ImplSDL2_InitForVulkan(m_sdlWin);
+        ImGui_ImplVulkan_InitInfo initInf = { };
+        initInf.Instance = m_RBE.instance();
+        initInf.PhysicalDevice = m_RBE.physicalDevice();
+        initInf.Device = m_RBE.logicalDevice();
+        initInf.QueueFamily = m_RBE.renderQueueFamilyIndex();
+        initInf.Queue = m_RBE.renderQueue();
+        initInf.PipelineCache = VK_NULL_HANDLE;
+        initInf.DescriptorPool = m_RBE.descriptorPoolIG();
+        initInf.Allocator = nullptr;
+        initInf.MinImageCount = m_RBE.swcMinImageCount();
+        initInf.ImageCount = m_RBE.swcImageCount();
+        initInf.CheckVkResultFn = checkVkResult;
+        ImGui_ImplVulkan_Init(&initInf, m_RBE.renderPassIG());
+
+        auto cmdBuf = m_RBE.beginTransientCmdBufIG();
+        ImGui_ImplVulkan_CreateFontsTexture(cmdBuf);
+        m_RBE.endTransientCmdBufIG(cmdBuf);
+
+        // To improve batching, we call ImGui rendering routine indirectly, from rendering backend
+        // at the time of rendering of everything.
+        m_RBE.setRenderFunctionIG([](VkCommandBuffer cmdBuf) noexcept
+        {
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
+        });
     #else
         ImGui_ImplSDL2_InitForOpenGL(m_sdlWin, m_glCtx);
         ImGui_ImplOpenGL3_Init();
@@ -123,6 +163,10 @@ void MainWindow::loadROM(const char *romFileName)
 
 void MainWindow::update()
 {
+#ifdef USE_IMGUI
+    handleUI();
+#endif
+
     if (m_bus.getCartrige())
     {
         // If running emulation, perform a full frame iteration,
@@ -135,11 +179,16 @@ void MainWindow::update()
     }
     else
     {
-        m_RBE.drawError();
+        m_RBE.drawIdle();
     }
 
-#ifdef USE_IMGUI
-    handleUI();
+#if defined(USE_IMGUI) && !defined(USE_VULKAN)
+    // For GLES, we just issue commands to paint ImGUI stuff over the main (emulator)
+    // commands. For Vulkan, the paint command buffer will be filled indirectly from the
+    // rendering backend itself.
+    auto &imGuiIO = ImGui::GetIO();
+    glViewport(0, 0, (int)imGuiIO.DisplaySize.x, (int)imGuiIO.DisplaySize.y);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
 }
 
@@ -197,7 +246,12 @@ void MainWindow::handleEvent(const SDL_Event &evt)
             break;
         case SDL_WINDOWEVENT:
             if (evt.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+            {
+#if defined(USE_IMGUI) && defined(USE_VULKAN)
+                ImGui_ImplVulkan_SetMinImageCount(m_RBE.swcMinImageCount());
+#endif
                 m_RBE.resize(evt.window.data1, evt.window.data2);
+            }
     }
 }
 
@@ -205,8 +259,8 @@ void MainWindow::handleEvent(const SDL_Event &evt)
 void MainWindow::handleUI()
 {
     // Draw ImGui stuff
-    auto &imGuiIO = ImGui::GetIO();
 #ifdef USE_VULKAN
+    ImGui_ImplVulkan_NewFrame();
 #else
     ImGui_ImplOpenGL3_NewFrame();
 #endif
@@ -269,10 +323,5 @@ void MainWindow::handleUI()
     }
 
     ImGui::Render();
-#ifdef USE_VULKAN
-#else
-    glViewport(0, 0, (int)imGuiIO.DisplaySize.x, (int)imGuiIO.DisplaySize.y);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
 }
 #endif

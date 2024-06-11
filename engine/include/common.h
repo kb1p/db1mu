@@ -105,14 +105,14 @@ class Maybe
     bool m_isNothing = true;
 
 public:
-    Maybe() = default;
-    Maybe(T &&v):
+    Maybe() noexcept = default;
+    Maybe(T &&v) noexcept:
         m_data { std::forward<T>(v) },
         m_isNothing { false }
     {
     }
-    Maybe(const Maybe&) = default;
-    Maybe(Maybe&&) = default;
+    Maybe(const Maybe&) noexcept = default;
+    Maybe(Maybe&&) noexcept = default;
 
     Maybe &operator=(const Maybe &m) noexcept
     {

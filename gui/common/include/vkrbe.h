@@ -4,6 +4,7 @@
 #include <PPU.h>
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <functional>
 #include <cstdint>
 #include <cassert>
 
@@ -13,6 +14,9 @@ class VulkanRenderingBackend final: public RenderingBackend
     {
         VkImageView view;
         VkFramebuffer fb;
+#ifdef USE_IMGUI
+        VkFramebuffer fbIG;
+#endif
     };
 
     struct Buffer
@@ -69,6 +73,7 @@ class VulkanRenderingBackend final: public RenderingBackend
     VkExtent2D m_surfExtent;
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     std::vector<SwapchainData> m_swapChainData;
+    uint32_t m_imageCount = 0;
 
     // Per-frame data
     static constexpr int MAX_FIF = 3;
@@ -93,6 +98,15 @@ class VulkanRenderingBackend final: public RenderingBackend
     // Pointer to texture's host-visible staging buffer memory
     uint8_t *m_pTexData = nullptr;
 
+#ifdef USE_IMGUI
+    // Additional stuff required for ImGUI rendering
+    VkDescriptorPool m_descPoolIG = VK_NULL_HANDLE;
+    VkRenderPass m_renderPassIG = VK_NULL_HANDLE;
+    VkCommandPool m_cmdPoolIG = VK_NULL_HANDLE;
+    VkCommandBuffer m_cmdBufsIG[MAX_FIF];
+    std::function<void(VkCommandBuffer)> m_renderFunc;
+#endif
+
     // Handling validation layer messages
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
                                                         VkDebugUtilsMessageTypeFlagsEXT type,
@@ -104,6 +118,8 @@ class VulkanRenderingBackend final: public RenderingBackend
     void resetSwapchain();
     void prepareTexture();
     void prepareTextureRenderingCmdBuf(const int frameIndex);
+    Maybe<uint32_t> beginRendering();
+    void endRendering(const uint32_t imgIndex, const uint32_t numCmdBufs, const VkCommandBuffer *const cmdBufs);
 
     Buffer createBuffer(const VkDeviceSize size,
                         const VkBufferUsageFlags usage,
@@ -135,11 +151,6 @@ public:
     void init(VkInstance inst);
     void release();
 
-    VkInstance instance() const noexcept
-    {
-        return m_inst;
-    }
-
     void setupOutput(VkSurfaceKHR surf);
     void resize(int w, int h) noexcept
     {
@@ -157,8 +168,68 @@ public:
     }
 
     void draw() override;
-    void drawError() override
+    void drawIdle() override;
+
+    VkInstance instance() const noexcept
     {
+        return m_inst;
+    }
+
+    VkPhysicalDevice physicalDevice() const noexcept
+    {
+        return m_physDev;
+    }
+
+    VkDevice logicalDevice() const noexcept
+    {
+        return m_dev;
+    }
+
+    uint32_t renderQueueFamilyIndex() const noexcept
+    {
+        return m_qfIndexGraphical;
+    }
+
+    VkQueue renderQueue() const noexcept
+    {
+        return m_renderQueue;
+    }
+
+    VkDescriptorPool descriptorPool() const noexcept
+    {
+        return m_descPool;
+    }
+
+    void waitDeviceIdle();
+
+#ifdef USE_IMGUI
+    VkDescriptorPool descriptorPoolIG() const noexcept
+    {
+        return m_descPoolIG;
+    }
+
+    VkRenderPass renderPassIG() const noexcept
+    {
+        return m_renderPassIG;
+    }
+
+    VkCommandBuffer beginTransientCmdBufIG();
+    void endTransientCmdBufIG(VkCommandBuffer cbuf);
+
+    void setRenderFunctionIG(std::function<void(VkCommandBuffer)> func) noexcept
+    {
+        m_renderFunc = std::move(func);
+    }
+#endif
+
+    uint32_t swcMinImageCount() const noexcept
+    {
+        return m_surfaceCaps.minImageCount;
+    }
+
+    uint32_t swcImageCount() const noexcept
+    {
+        return m_imageCount;
     }
 };
 

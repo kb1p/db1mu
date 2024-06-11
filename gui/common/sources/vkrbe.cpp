@@ -178,6 +178,9 @@ void VulkanRenderingBackend::destroySwapchain()
     for (const auto &swapChainItm: m_swapChainData)
     {
         vkDestroyFramebuffer(m_dev, swapChainItm.fb, nullptr);
+#ifdef USE_IMGUI
+        vkDestroyFramebuffer(m_dev, swapChainItm.fbIG, nullptr);
+#endif
         vkDestroyImageView(m_dev, swapChainItm.view, nullptr);
     }
     vkDestroySwapchainKHR(m_dev, m_swapChain, nullptr);
@@ -203,6 +206,13 @@ void VulkanRenderingBackend::release()
     vkDestroyDescriptorPool(m_dev, m_descPool, nullptr);
     vkDestroyDescriptorSetLayout(m_dev, m_descrSetLayout, nullptr);
     vkDestroyRenderPass(m_dev, m_renderPass, nullptr);
+
+#ifdef USE_IMGUI
+    vkDestroyCommandPool(m_dev, m_cmdPoolIG, nullptr);
+    vkDestroyDescriptorPool(m_dev, m_descPoolIG, nullptr);
+    vkDestroyRenderPass(m_dev, m_renderPassIG, nullptr);
+#endif
+
     vkDestroyDevice(m_dev, nullptr);
     vkDestroySurfaceKHR(m_inst, m_surface, nullptr);
     if (m_dbgMsgr != VK_NULL_HANDLE)
@@ -282,7 +292,7 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
                 if (match)
                 {
                     m_physDev = devCand;
-                    Log::i("Using device %s", m_physDevProps.deviceName);
+                    Log::i("[Vulkan] Using device %s", m_physDevProps.deviceName);
                     break;
                 }
             }
@@ -385,57 +395,106 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
         }
 
     // Create renderpass
-    const VkAttachmentDescription attachDescrs[] = {
-        // Color attachment
-        {
-            0,                                          // flags
-            m_surfaceFormat.format,                     // format
-            VK_SAMPLE_COUNT_1_BIT,                      // samples
-            VK_ATTACHMENT_LOAD_OP_CLEAR,                // load op
-            VK_ATTACHMENT_STORE_OP_STORE,               // store op
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,            // stencil load op
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,           // stencil store op
-            VK_IMAGE_LAYOUT_UNDEFINED,                  // initial layout
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR             // final layout
-        }
-    };
-    const VkAttachmentReference clrAttachRef = {
-        0,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
-    const VkSubpassDescription subpass = {
-        0,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        0,
-        nullptr,
-        1,
-        &clrAttachRef,
-        nullptr,
-        nullptr,
-        0,
-        nullptr
-    };
-    const VkSubpassDependency rendPassExtDep = {
-        VK_SUBPASS_EXTERNAL,
-        0,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        0,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    };
-    const VkRenderPassCreateInfo passInfo = {
-        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        nullptr,
-        0,
-        sizeof(attachDescrs) / sizeof(VkAttachmentDescription),
-        attachDescrs,
-        1,
-        &subpass,
-        1,
-        &rendPassExtDep
-    };
-    CHECK(vkCreateRenderPass(m_dev, &passInfo, nullptr, &m_renderPass),
-          "failed to create render pass");
+    {
+        const VkAttachmentDescription attachDescrs[] = {
+            // Color attachment
+            {
+                0,                                          // flags
+                m_surfaceFormat.format,                     // format
+                VK_SAMPLE_COUNT_1_BIT,                      // samples
+                VK_ATTACHMENT_LOAD_OP_CLEAR,                // load op
+                VK_ATTACHMENT_STORE_OP_STORE,               // store op
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,            // stencil load op
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,           // stencil store op
+                VK_IMAGE_LAYOUT_UNDEFINED,                  // initial layout
+#ifdef USE_IMGUI
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL    // final layout: will be painted over by ImGUI render pass
+#else
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR             // final layout: presenting to the swap chain
+#endif
+            }
+        };
+        const VkAttachmentReference clrAttachRef = {
+            0,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        };
+        const VkSubpassDescription subpass = {
+            0,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            0,
+            nullptr,
+            1,
+            &clrAttachRef,
+            nullptr,
+            nullptr,
+            0,
+            nullptr
+        };
+        const VkSubpassDependency rendPassExtDep = {
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            0,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+        };
+        const VkRenderPassCreateInfo passInfo = {
+            VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+            nullptr,
+            0,
+            sizeof(attachDescrs) / sizeof(VkAttachmentDescription),
+            attachDescrs,
+            1,
+            &subpass,
+            1,
+            &rendPassExtDep
+        };
+        CHECK(vkCreateRenderPass(m_dev, &passInfo, nullptr, &m_renderPass),
+            "failed to create render pass");
+    }
+
+#ifdef USE_IMGUI
+    // Create additional renderpass for ImGUI rendering
+    {
+        VkAttachmentDescription attDescr = { };
+        attDescr.format = m_surfaceFormat.format;
+        attDescr.samples = VK_SAMPLE_COUNT_1_BIT;
+        attDescr.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attDescr.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attDescr.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attDescr.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attDescr.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attDescr.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference attDescrRef = { };
+        attDescrRef.attachment = 0;
+        attDescrRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass = {};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &attDescrRef;
+
+        VkSubpassDependency spDep = { };
+        spDep.srcSubpass = VK_SUBPASS_EXTERNAL;
+        spDep.dstSubpass = 0;
+        spDep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        spDep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        spDep.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        spDep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkRenderPassCreateInfo info = { };
+        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        info.attachmentCount = 1;
+        info.pAttachments = &attDescr;
+        info.subpassCount = 1;
+        info.pSubpasses = &subpass;
+        info.dependencyCount = 1;
+        info.pDependencies = &spDep;
+        CHECK(vkCreateRenderPass(m_dev, &info, nullptr, &m_renderPassIG),
+              "[ImGUI] failed to create render pass");
+    }
+#endif
 
     // Create shader modules
     VkShaderModule smVert, smFrag;
@@ -679,6 +738,28 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
     CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufInfo, m_cmdBufs),
           "failed to allocate command buffers");
 
+#ifdef USE_IMGUI
+    // Command pool for ImGUI and allocate render command buffers from it
+    const VkCommandPoolCreateInfo cmdPoolIGInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        nullptr,
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        m_qfIndexGraphical
+    };
+    CHECK(vkCreateCommandPool(m_dev, &cmdPoolIGInfo, nullptr, &m_cmdPoolIG),
+          "[ImGUI] failed to create command pool");
+
+    const VkCommandBufferAllocateInfo cmdBufIGInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        nullptr,
+        m_cmdPoolIG,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        MAX_FIF
+    };
+    CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufIGInfo, m_cmdBufsIG),
+          "[ImGUI] failed to allocate command buffers");
+#endif
+
     // Create descriptor set pool
     const VkDescriptorPoolSize dsPoolSizes[] = {
         {
@@ -686,16 +767,44 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
             MAX_FIF
         }
     };
+    constexpr auto numPoolSizes = sizeof(dsPoolSizes) / sizeof(VkDescriptorPoolSize);
     const VkDescriptorPoolCreateInfo dsPoolInf = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         nullptr,
         0,
         MAX_FIF, // max sets
-        sizeof(dsPoolSizes) / sizeof(VkDescriptorPoolSize),
+        numPoolSizes,
         dsPoolSizes
     };
     CHECK(vkCreateDescriptorPool(m_dev, &dsPoolInf, nullptr, &m_descPool),
-          "failed to create descriptor pool");
+          "failed to create descriptor pool for emulator");
+
+#ifdef USE_IMGUI
+    const VkDescriptorPoolSize dsPoolSizesIG[] = {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+    constexpr auto numPoolSizesIG = sizeof(dsPoolSizesIG) / sizeof(VkDescriptorPoolSize);
+    const VkDescriptorPoolCreateInfo dsPoolInfIG = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        nullptr,
+        0,
+        1000 * numPoolSizesIG,
+        numPoolSizesIG,
+        dsPoolSizesIG
+    };
+    CHECK(vkCreateDescriptorPool(m_dev, &dsPoolInfIG, nullptr, &m_descPoolIG),
+          "failed to create secodary descriptor pool for ImGUI");
+#endif
 
     // Allocate descriptor sets
     VkDescriptorSetLayout dsLayouts[MAX_FIF];
@@ -1107,15 +1216,15 @@ void VulkanRenderingBackend::createSwapchain()
         m_surfExtent.height = ::clamp<uint32_t>(m_height, m_surfaceCaps.minImageExtent.height, m_surfaceCaps.maxImageExtent.height);
     }
 
-    Log::i("Surface extent: %dx%d", m_surfExtent.width, m_surfExtent.height);
+    Log::d("[Vulkan] Surface extent: %dx%d", m_surfExtent.width, m_surfExtent.height);
 
     // Pick number of images in a swap chain
-    uint32_t imageCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
-                          m_surfaceCaps.maxImageCount :
-                          m_surfaceCaps.minImageCount + 1;
-    imageCount = std::min<uint32_t>(imageCount, MAX_FIF);
+    m_imageCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
+                   m_surfaceCaps.maxImageCount :
+                   m_surfaceCaps.minImageCount + 1;
+    m_imageCount = std::min<uint32_t>(m_imageCount, MAX_FIF);
 
-    Log::i("Number of images in a swap chain: %d", imageCount);
+    Log::d("[Vulkan] Number of images in a swap chain: %d", m_imageCount);
 
     const bool separatePresQueue = m_qfIndexGraphical != m_qfIndexPresentation;
     const uint32_t queueIndices[] = { m_qfIndexGraphical, m_qfIndexPresentation };
@@ -1124,7 +1233,7 @@ void VulkanRenderingBackend::createSwapchain()
         nullptr,
         0,
         m_surface,
-        imageCount,
+        m_imageCount,
         m_surfaceFormat.format,
         m_surfaceFormat.colorSpace,
         m_surfExtent,
@@ -1174,7 +1283,26 @@ void VulkanRenderingBackend::createSwapchain()
         CHECK(vkCreateFramebuffer(m_dev, &fbInf, nullptr, &r.fb),
               "failed to create FBO for one of swapchain images");
 
-        // Fill the command buffer
+#ifdef USE_IMGUI
+        // ImGUI needs a set of its own framebuffer objects
+        // (pointing to the same swapchain images provided by surface).
+        const VkImageView attachmentsIG[] = { r.view };
+        const VkFramebufferCreateInfo fbIGInf = {
+            VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            nullptr,
+            0,
+            m_renderPassIG,
+            sizeof(attachmentsIG) / sizeof(VkImageView),
+            attachmentsIG,
+            m_surfExtent.width,
+            m_surfExtent.height,
+            1
+        };
+        CHECK(vkCreateFramebuffer(m_dev, &fbIGInf, nullptr, &r.fbIG),
+              "[ImGUI] failed to create FBO for one of swapchain images");
+#endif
+
+        // Fill the command buffer for emulator rendering
         prepareTextureRenderingCmdBuf(i);
     }
 
@@ -1183,7 +1311,7 @@ void VulkanRenderingBackend::createSwapchain()
 
 void VulkanRenderingBackend::resetSwapchain()
 {
-    Log::i("Resizing surface to %dx%d", m_width, m_height);
+    Log::d("[Vulkan] Resizing surface to %dx%d", m_width, m_height);
 
     CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle at surface resize");
     destroySwapchain();
@@ -1256,29 +1384,27 @@ void VulkanRenderingBackend::prepareTextureRenderingCmdBuf(const int frameIndex)
         m_surfExtent
     };
     vkCmdSetScissor(cmdBuf, 0, 1, &scissors);
-    const VkDeviceSize vbOffsets = 0;
     vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_ufmDescSets[frameIndex], 0, nullptr);
     vkCmdDraw(cmdBuf, 6, 1, 0, 0);
     vkCmdEndRenderPass(cmdBuf);
     CHECK(vkEndCommandBuffer(cmdBuf), "failed to end command buffer recording");
 }
 
-void VulkanRenderingBackend::draw()
+Maybe<uint32_t> VulkanRenderingBackend::beginRendering()
 {
     const auto fence = m_fncsInFlight[m_curFrame];
-    const auto semImgAvail = m_semsImageAvailable[m_curFrame],
-               semRenderFinished = m_semsRenderFinished[m_curFrame];
+    const auto semImgAvail = m_semsImageAvailable[m_curFrame];
 
     // Fence is in signaled state after creation so no infinite wait here
     CHECK(vkWaitForFences(m_dev, 1, &fence, VK_TRUE, UINT64_MAX),
           "failed to wait for frame-in-flight fence");
 
     uint32_t imageIndex;
-    auto r = vkAcquireNextImageKHR(m_dev, m_swapChain, UINT64_MAX, semImgAvail, VK_NULL_HANDLE, &imageIndex);
+    const auto r = vkAcquireNextImageKHR(m_dev, m_swapChain, UINT64_MAX, semImgAvail, VK_NULL_HANDLE, &imageIndex);
     if (r == VK_ERROR_OUT_OF_DATE_KHR)
     {
         resetSwapchain();
-        return;
+        return { };
     }
     else if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR)
         throw runtime_error { "failed to acquire next swapchain image" };
@@ -1286,8 +1412,14 @@ void VulkanRenderingBackend::draw()
     CHECK(vkResetFences(m_dev, 1, &fence),
           "failed to reset frame-in-flight fence");
 
-    // Command buffers already filled at swapchain creation stage, just submit them.
-    const auto cmdBuf = m_cmdBufs[imageIndex];
+    return imageIndex;
+}
+
+void VulkanRenderingBackend::endRendering(const uint32_t imgIndex, const uint32_t numCmdBufs, const VkCommandBuffer *const cmdBufs)
+{
+    const auto fence = m_fncsInFlight[m_curFrame];
+    const auto semImgAvail = m_semsImageAvailable[m_curFrame],
+               semRenderFinished = m_semsRenderFinished[m_curFrame];
 
     // Submit frame to render queue
     const VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -1297,8 +1429,8 @@ void VulkanRenderingBackend::draw()
         1,
         &semImgAvail,
         waitStages,
-        1,
-        &cmdBuf,
+        numCmdBufs,
+        cmdBufs,
         1,
         &semRenderFinished
     };
@@ -1312,9 +1444,9 @@ void VulkanRenderingBackend::draw()
         &semRenderFinished,
         1,
         &m_swapChain,
-        &imageIndex
+        &imgIndex
     };
-    r = vkQueuePresentKHR(m_presentationQueue, &presentInfo);
+    const auto r = vkQueuePresentKHR(m_presentationQueue, &presentInfo);
     if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR || m_surfaceSizeChanged)
         resetSwapchain();
     else if (r != VK_SUCCESS)
@@ -1324,4 +1456,121 @@ void VulkanRenderingBackend::draw()
     m_curFrame = (m_curFrame + 1) % MAX_FIF;
 }
 
+void VulkanRenderingBackend::draw()
+{
+    const auto mbImageIndex = beginRendering();
+    if (mbImageIndex.isNothing())
+        return;
 
+    const auto imageIndex = mbImageIndex.value();
+
+    // Command buffer containing NES texture rendering commands is already prepared at this point.
+#ifdef USE_IMGUI
+    auto cmdBufIG = m_cmdBufsIG[imageIndex];
+
+    CHECK(vkResetCommandBuffer(cmdBufIG, 0),
+          "[ImGUI] failed to reset command buffer");
+
+    const VkCommandBufferBeginInfo cmdBufBeginInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        nullptr,
+        0,
+        nullptr
+    };
+    CHECK(vkBeginCommandBuffer(cmdBufIG, &cmdBufBeginInfo),
+          "[ImGUI] failed to begin command buffer");
+
+    const VkClearValue clear[] = {
+        {{{ 0.0f, 0.0f, 0.0f, 1.0f }}},
+        {{{ 1.0f, 0.0f }}}
+    };
+    const VkRenderPassBeginInfo renderPassBeginInfo = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        nullptr,
+        m_renderPassIG,
+        m_swapChainData[imageIndex].fbIG,
+        {
+            { 0, 0 },
+            m_surfExtent
+        },
+        sizeof(clear) / sizeof(VkClearValue),
+        clear
+    };
+    vkCmdBeginRenderPass(cmdBufIG, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    // Fill the ImGUI rendering commands to the buffer
+    m_renderFunc(cmdBufIG);
+
+    vkCmdEndRenderPass(cmdBufIG);
+    CHECK(vkEndCommandBuffer(cmdBufIG),
+          "[ImGUI] failed to end command buffer recording");
+
+    const VkCommandBuffer cmdBufs[] = {
+        m_cmdBufs[imageIndex],
+        cmdBufIG
+    };
+#else
+    const VkCommandBuffer cmdBufs[] = {
+        m_cmdBufs[imageIndex]
+    };
+#endif
+
+    endRendering(imageIndex, sizeof(cmdBufs) / sizeof(VkCommandBuffer), cmdBufs);
+}
+
+void VulkanRenderingBackend::drawIdle()
+{
+    draw();
+}
+
+void VulkanRenderingBackend::waitDeviceIdle()
+{
+    CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle (external request)");
+}
+
+#ifdef USE_IMGUI
+VkCommandBuffer VulkanRenderingBackend::beginTransientCmdBufIG()
+{
+    // Allocate command buffers
+    const VkCommandBufferAllocateInfo cmdBufInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        nullptr,
+        m_cmdPoolIG,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        1
+    };
+
+    VkCommandBuffer tmpCmdBuf;
+    CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufInfo, &tmpCmdBuf),
+          "[ImGUI] failed to allocate transiend command buffer");
+
+    const VkCommandBufferBeginInfo begInf = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        nullptr,
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    };
+    CHECK(vkBeginCommandBuffer(tmpCmdBuf, &begInf), "[ImGUI] failed to begin transient buffer recording");
+
+    return tmpCmdBuf;
+}
+
+void VulkanRenderingBackend::endTransientCmdBufIG(VkCommandBuffer cbuf)
+{
+    CHECK(vkEndCommandBuffer(cbuf), "[ImGUI] failed to end transient buffer recording");
+    const VkSubmitInfo cmdSubmitInfo = {
+        VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        nullptr,
+        0,
+        nullptr,
+        nullptr,
+        1,
+        &cbuf,
+        0,
+        nullptr
+    };
+    CHECK(vkQueueSubmit(m_renderQueue, 1, &cmdSubmitInfo, VK_NULL_HANDLE),
+          "[ImGUI] failed to submit transient buffer to queue");
+    CHECK(vkQueueWaitIdle(m_renderQueue), "[ImGUI] failed to wait transient buffer to finish");
+    vkFreeCommandBuffers(m_dev, m_cmdPoolIG, 1, &cbuf);
+}
+#endif
