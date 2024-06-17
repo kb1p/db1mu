@@ -1110,9 +1110,10 @@ void VulkanRenderingBackend::createSwapchain()
     Log::i("Surface extent: %dx%d", m_surfExtent.width, m_surfExtent.height);
 
     // Pick number of images in a swap chain
-    const uint32_t imageCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
-                                m_surfaceCaps.maxImageCount :
-                                m_surfaceCaps.minImageCount + 1;
+    uint32_t imageCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
+                          m_surfaceCaps.maxImageCount :
+                          m_surfaceCaps.minImageCount + 1;
+    imageCount = std::min<uint32_t>(imageCount, MAX_FIF);
 
     Log::i("Number of images in a swap chain: %d", imageCount);
 
@@ -1172,6 +1173,9 @@ void VulkanRenderingBackend::createSwapchain()
         };
         CHECK(vkCreateFramebuffer(m_dev, &fbInf, nullptr, &r.fb),
               "failed to create FBO for one of swapchain images");
+
+        // Fill the command buffer
+        prepareTextureRenderingCmdBuf(i);
     }
 
     m_surfaceSizeChanged = false;
@@ -1191,31 +1195,9 @@ void VulkanRenderingBackend::resetSwapchain()
     createSwapchain();
 }
 
-void VulkanRenderingBackend::draw()
+void VulkanRenderingBackend::prepareTextureRenderingCmdBuf(const int frameIndex)
 {
-    const auto fence = m_fncsInFlight[m_curFrame];
-    const auto semImgAvail = m_semsImageAvailable[m_curFrame],
-               semRenderFinished = m_semsRenderFinished[m_curFrame];
-    const auto cmdBuf = m_cmdBufs[m_curFrame];
-
-    // Fence is in signaled state after creation so no infinite wait here
-    CHECK(vkWaitForFences(m_dev, 1, &fence, VK_TRUE, UINT64_MAX),
-          "failed to wait for frame-in-flight fence");
-
-    uint32_t imageIndex;
-    auto r = vkAcquireNextImageKHR(m_dev, m_swapChain, UINT64_MAX, semImgAvail, VK_NULL_HANDLE, &imageIndex);
-    if (r == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        resetSwapchain();
-        return;
-    }
-    else if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR)
-        throw runtime_error { "failed to acquire next swapchain image" };
-
-    CHECK(vkResetFences(m_dev, 1, &fence),
-          "failed to reset frame-in-flight fence");
-
-    // Fill the command buffer
+    const auto cmdBuf = m_cmdBufs[frameIndex];
     CHECK(vkResetCommandBuffer(cmdBuf, 0), "failed to reset command buffer");
     const VkCommandBufferBeginInfo cmdBufBeginInfo = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1253,7 +1235,7 @@ void VulkanRenderingBackend::draw()
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         nullptr,
         m_renderPass,
-        m_swapChainData[imageIndex].fb,
+        m_swapChainData[frameIndex].fb,
         {
             { 0, 0 },
             m_surfExtent
@@ -1275,10 +1257,37 @@ void VulkanRenderingBackend::draw()
     };
     vkCmdSetScissor(cmdBuf, 0, 1, &scissors);
     const VkDeviceSize vbOffsets = 0;
-    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_ufmDescSets[m_curFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_ufmDescSets[frameIndex], 0, nullptr);
     vkCmdDraw(cmdBuf, 6, 1, 0, 0);
     vkCmdEndRenderPass(cmdBuf);
     CHECK(vkEndCommandBuffer(cmdBuf), "failed to end command buffer recording");
+}
+
+void VulkanRenderingBackend::draw()
+{
+    const auto fence = m_fncsInFlight[m_curFrame];
+    const auto semImgAvail = m_semsImageAvailable[m_curFrame],
+               semRenderFinished = m_semsRenderFinished[m_curFrame];
+
+    // Fence is in signaled state after creation so no infinite wait here
+    CHECK(vkWaitForFences(m_dev, 1, &fence, VK_TRUE, UINT64_MAX),
+          "failed to wait for frame-in-flight fence");
+
+    uint32_t imageIndex;
+    auto r = vkAcquireNextImageKHR(m_dev, m_swapChain, UINT64_MAX, semImgAvail, VK_NULL_HANDLE, &imageIndex);
+    if (r == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        resetSwapchain();
+        return;
+    }
+    else if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR)
+        throw runtime_error { "failed to acquire next swapchain image" };
+
+    CHECK(vkResetFences(m_dev, 1, &fence),
+          "failed to reset frame-in-flight fence");
+
+    // Command buffers already filled at swapchain creation stage, just submit them.
+    const auto cmdBuf = m_cmdBufs[imageIndex];
 
     // Submit frame to render queue
     const VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };

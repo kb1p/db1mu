@@ -71,7 +71,7 @@ class VulkanRenderingBackend final: public RenderingBackend
     std::vector<SwapchainData> m_swapChainData;
 
     // Per-frame data
-    static constexpr int MAX_FIF = 2;
+    static constexpr int MAX_FIF = 3;
     VkCommandBuffer m_cmdBufs[MAX_FIF];
     VkDescriptorSet m_ufmDescSets[MAX_FIF];
     void *m_ufmBufsMapping[MAX_FIF];
@@ -103,6 +103,7 @@ class VulkanRenderingBackend final: public RenderingBackend
     void destroySwapchain();
     void resetSwapchain();
     void prepareTexture();
+    void prepareTextureRenderingCmdBuf(const int frameIndex);
 
     Buffer createBuffer(const VkDeviceSize size,
                         const VkBufferUsageFlags usage,
