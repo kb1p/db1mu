@@ -381,7 +381,7 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
     m_surfaceFormat = surfFmts[0];
     for (const auto &fmt: surfFmts)
         if (fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR &&
-            fmt.format == VK_FORMAT_B8G8R8A8_SRGB)
+            fmt.format == VK_FORMAT_B8G8R8A8_UNORM)
         {
             m_surfaceFormat = fmt;
             break;
@@ -1175,7 +1175,7 @@ void VulkanRenderingBackend::prepareTexture()
     m_texture = createTexture(TEX_WIDTH, TEX_HEIGHT,
                               mipLevels,
                               VK_SAMPLE_COUNT_1_BIT,
-                              VK_FORMAT_R8G8B8A8_SRGB,
+                              VK_FORMAT_R8G8B8A8_UNORM,
                               VK_IMAGE_TILING_OPTIMAL,
                               VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
