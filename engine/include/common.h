@@ -169,14 +169,14 @@ public:
         m_isNothing = true;
     }
 
-    bool operator==(const Maybe &x) const
+    bool operator==(const Maybe &x) const noexcept
     {
         return m_isNothing && x.m_isNothing ? true :
                !m_isNothing && !x.m_isNothing ? m_data == x.m_data :
                false;
     }
 
-    bool operator!=(const Maybe &x) const
+    bool operator!=(const Maybe &x) const noexcept
     {
         return !(*this == x);
     }

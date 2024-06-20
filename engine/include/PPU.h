@@ -13,14 +13,15 @@ protected:
     // NES to RGB
     static const uint32_t s_palette[64];
 
-    RenderingBackend() = default;
+    RenderingBackend();
 
     // Helper function to set line to a RGBA buffer using default settings.
     // Make sure the buffer has enough space.
-    static void setLineToBuf(uint8_t *dst,
-                             const int n,
-                             const c6502_byte_t *pColorData,
-                             const c6502_byte_t bgColor);
+    static void setLineToBuf_RGBA8(uint8_t *dst,
+                                   const int n,
+                                   const c6502_byte_t *pColorData,
+                                   const c6502_byte_t bgColor) noexcept;
+    static void fillWhiteNoise_RGBA8(uint8_t *dst) noexcept;
 
 public:
     RenderingBackend(const RenderingBackend&) = delete;

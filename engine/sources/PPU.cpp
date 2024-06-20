@@ -2,6 +2,9 @@
 #include "bus.h"
 #include "log.h"
 
+#include <cstdlib>
+#include <ctime>
+
 constexpr int RenderingBackend::TEX_WIDTH,
               RenderingBackend::TEX_HEIGHT;
 
@@ -72,10 +75,15 @@ const uint32_t RenderingBackend::s_palette[64] = {
     0b000000000000000u
 };
 
-void RenderingBackend::setLineToBuf(uint8_t *dst,
-                                    const int n,
-                                    const c6502_byte_t *pColorData,
-                                    const c6502_byte_t bgColor)
+RenderingBackend::RenderingBackend()
+{
+    std::srand(std::time(nullptr));
+}
+
+void RenderingBackend::setLineToBuf_RGBA8(uint8_t *dst,
+                                          const int n,
+                                          const c6502_byte_t *pColorData,
+                                          const c6502_byte_t bgColor) noexcept
 {
     assert(pColorData != nullptr);
 
@@ -91,6 +99,19 @@ void RenderingBackend::setLineToBuf(uint8_t *dst,
         pDest[1] = static_cast<uint8_t>(divrnd(((s >> 5) & b5m) * 255, 31));
         pDest[2] = static_cast<uint8_t>(divrnd((s & b5m) * 255, 31));
         pDest[3] = 255u;
+    }
+}
+
+void RenderingBackend::fillWhiteNoise_RGBA8(uint8_t* dst) noexcept
+{
+    auto p = dst;
+    for (int i = 0; i < TEX_WIDTH * TEX_HEIGHT; i++)
+    {
+        const auto rv = static_cast<uint8_t>(rand() % 0xFF);
+        *p++ = rv;
+        *p++ = rv;
+        *p++ = rv;
+        *p++ = 0xFFu;
     }
 }
 
@@ -451,11 +472,8 @@ void PPU::drawNextLine() noexcept
     if (enableRendering)
         m_st.vramAddr = incrWrpAddrVert(m_st.vramAddr);
 
-    if (!NTSCLineSkip)
-    {
-        assert(m_pBackend != nullptr);
-        m_pBackend->setLine(m_currLine, lnData + fineX, bus().readVideoMem(0x3F00u));
-    }
+    assert(m_pBackend != nullptr);
+    m_pBackend->setLine(m_currLine, lnData + fineX, bus().readVideoMem(0x3F00u));
 
     m_currLine++;
 }

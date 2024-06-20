@@ -164,7 +164,7 @@ public:
                  const c6502_byte_t bgColor) override
     {
         assert(m_pTexData != nullptr);
-        setLineToBuf(m_pTexData, n, pColorData, bgColor);
+        setLineToBuf_RGBA8(m_pTexData, n, pColorData, bgColor);
     }
 
     void draw() override;

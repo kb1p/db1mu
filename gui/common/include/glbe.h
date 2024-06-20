@@ -159,7 +159,7 @@ void GLRenderingBackend<IGL>::setLine(const int n,
                                       const c6502_byte_t *pColorData,
                                       const c6502_byte_t bgColor)
 {
-    setLineToBuf(m_texData, n, pColorData, bgColor);
+    setLineToBuf_RGBA8(m_texData, n, pColorData, bgColor);
 }
 
 template <typename IGL>
@@ -188,8 +188,8 @@ void GLRenderingBackend<IGL>::draw()
 template <typename IGL>
 void GLRenderingBackend<IGL>::drawIdle()
 {
-    m_gl->glClearColor(1, 1, 1, 1);
-    m_gl->glClear(GL_COLOR_BUFFER_BIT);
+    fillWhiteNoise_RGBA8(m_texData);
+    draw();
 }
 
 #endif
