@@ -89,6 +89,10 @@ If UI is not used, there is no way to pick ROM file interactively, so a path to 
 
 #### Running emulator with SDL frontend
 Command line options can be specified in any order. The following command line options are available:
+Option             | Effect
+-------------------|---------
+`--fullscreen`     | Run in fullscreen mode (if not specified, run in windowed mode)
+`path/to/rom.file` | Load and run iNES ROM file immediatelly at startup (mandatory if UI is not used).
 
 ### Switching to Vulkan renderer
 By default, GLES renderer is used. To use Vulkan renderer (for either Qt and SDL frontend) follow below steps:
@@ -104,9 +108,3 @@ By default, GLES renderer is used. To use Vulkan renderer (for either Qt and SDL
   ```
 
 Please note that **Vulkan validation layers** are enabled in debug build configurations, in release configurations they are disabled. Validation layer output is printed to db1mu log system for SDL2, to default Qt's debug output for Qt5.
-
-
-Option             | Effect
--------------------|---------
-`--fullscreen`     | Run in fullscreen mode (if not specified, run in windowed mode)
-`path/to/rom.file` | Load and run iNES ROM file immediatelly at startup (mandatory if UI is not used).
