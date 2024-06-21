@@ -87,6 +87,9 @@ If UI is not used, there is no way to pick ROM file interactively, so a path to 
 - If paths to GLES headers / libraries cannot be figured out using `KHRONOS_HEADERS` and `OPENGLES_LIBDIR` environment variables, need to provide these paths to cmake configuration by setting `-DGLES_HDR_PATH=...` and `-DGLES_LIB_PATH=...` variables.
 - To create standalone executable, manually copy SDL2.dll, GLESv2.dll, etc. to `path/to/install/bin`.
 
+#### Running emulator with SDL frontend
+Command line options can be specified in any order. The following command line options are available:
+
 ### Switching to Vulkan renderer
 By default, GLES renderer is used. To use Vulkan renderer (for either Qt and SDL frontend) follow below steps:
 
@@ -102,8 +105,6 @@ By default, GLES renderer is used. To use Vulkan renderer (for either Qt and SDL
 
 Please note that **Vulkan validation layers** are enabled in debug build configurations, in release configurations they are disabled. Validation layer output is printed to db1mu log system for SDL2, to default Qt's debug output for Qt5.
 
-#### Running emulator with SDL frontend
-Command line options can be specified in any order. The following command line options are available:
 
 Option             | Effect
 -------------------|---------
