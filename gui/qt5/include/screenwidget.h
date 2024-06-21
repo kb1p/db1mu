@@ -51,7 +51,8 @@ private:
     Bus *m_pBus = nullptr;
     int m_timerId = 0;
     std::unique_ptr<RenderingBackend> m_RBE;
-    bool m_runEmulation = false;
+    bool m_runEmulation = false,
+         m_stepEmulation = false;
 
     QElapsedTimer m_clocks;
     int m_accFrameTimes = 0,

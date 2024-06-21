@@ -76,9 +76,8 @@ void ScreenWidget::resume()
 void ScreenWidget::step()
 {
     m_nFrames = m_accFrameTimes = 0;
-    m_runEmulation = true;
+    m_stepEmulation = true;
     requestUpdate();
-    m_runEmulation = false;
 }
 
 void ScreenWidget::initialize()
@@ -150,7 +149,7 @@ void ScreenWidget::render()
     Q_ASSERT(m_pBus);
     if (m_pBus->getCartrige())
     {
-        if (m_runEmulation)
+        if (m_runEmulation || m_stepEmulation)
         {
             const int dt = m_clocks.restart();
             if (m_nFrames++ > 0)
@@ -166,6 +165,8 @@ void ScreenWidget::render()
             }
 
             m_pBus->runFrame();
+
+            m_stepEmulation = false;
         }
         else
             m_RBE->draw();
@@ -194,7 +195,6 @@ bool ScreenWidget::event(QEvent *e)
                 initialize();
             case QEvent::UpdateRequest:
                 render();
-                //requestUpdate();
                 break;
             case QEvent::Resize:
                 static_cast<Backend*>(m_RBE.get())->resize(width(), height());
