@@ -22,6 +22,10 @@ ScreenWidget::ScreenWidget(QWidget *container):
 {
 #ifdef USE_VULKAN
     setSurfaceType(QWindow::VulkanSurface);
+
+    #ifndef NDEBUG
+        m_vkInstance.setLayers(QByteArrayList() << "VK_LAYER_KHRONOS_validation");
+    #endif
 #else
     setSurfaceType(QWindow::OpenGLSurface);
 
