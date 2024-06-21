@@ -148,27 +148,30 @@ void ScreenWidget::render()
 #endif
 
     Q_ASSERT(m_pBus);
-    if (m_runEmulation)
+    if (m_pBus->getCartrige())
     {
-        const int dt = m_clocks.restart();
-        if (m_nFrames++ > 0)
+        if (m_runEmulation)
         {
-            if (m_nFrames < 60)
-                m_accFrameTimes += dt;
-            else
+            const int dt = m_clocks.restart();
+            if (m_nFrames++ > 0)
             {
-                Q_EMIT fpsChanged(m_nFrames * 1000.0f / m_accFrameTimes);
-                m_nFrames = 1;
-                m_accFrameTimes = dt;
+                if (m_nFrames < 60)
+                    m_accFrameTimes += dt;
+                else
+                {
+                    Q_EMIT fpsChanged(m_nFrames * 1000.0f / m_accFrameTimes);
+                    m_nFrames = 1;
+                    m_accFrameTimes = dt;
+                }
             }
-        }
 
-        m_pBus->runFrame();
+            m_pBus->runFrame();
+        }
+        else
+            m_RBE->draw();
     }
-    else if (!m_pBus->getCartrige())
-    {
+    else
         m_RBE->drawIdle();
-    }
 
 #ifndef USE_VULKAN
     m_pGLCtx->swapBuffers(this);
