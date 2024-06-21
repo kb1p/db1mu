@@ -1,19 +1,30 @@
 #include "screenwidget.h"
 
-#include <QOpenGLContext>
+#include <bus.h>
 #include <QSurfaceFormat>
 #include <QMessageBox>
 #include <QTimerEvent>
 #include <QDebug>
 
-#include <bus.h>
-#include "glbe.h"
+#ifdef USE_VULKAN
+    #include "vkrbe.h"
 
-using Backend = GLRenderingBackend<QOpenGLFunctions>;
+    using Backend = VulkanRenderingBackend;
+#else
+    #include <QOpenGLFunctions>
+    #include "glbe.h"
 
-ScreenWidget::ScreenWidget(QWidget *parent):
-    QOpenGLWidget { parent }
+    using Backend = GLRenderingBackend<QOpenGLFunctions>;
+#endif
+
+ScreenWidget::ScreenWidget(QWidget *container):
+    m_pContainer { container }
 {
+#ifdef USE_VULKAN
+    setSurfaceType(QWindow::VulkanSurface);
+#else
+    setSurfaceType(QWindow::OpenGLSurface);
+
     // Request alpha channel and depth buffer
     QSurfaceFormat fmt;
     fmt.setRenderableType(QSurfaceFormat::OpenGLES);
@@ -26,11 +37,18 @@ ScreenWidget::ScreenWidget(QWidget *parent):
     setFormat(fmt);
     //setUpdateBehavior(QOpenGLWidget::PartialUpdate);
 
+    m_pGLCtx = new QOpenGLContext { this };
+    m_pGLCtx->setFormat(fmt);
+#endif
+
     m_RBE.reset(new Backend);
+
+    m_timerId = startTimer(17, Qt::PreciseTimer);
 }
 
 ScreenWidget::~ScreenWidget()
 {
+    m_RBE.reset();
 }
 
 bool ScreenWidget::isRunning() const noexcept
@@ -48,30 +66,59 @@ void ScreenWidget::pause()
 
 void ScreenWidget::resume()
 {
-    Q_ASSERT(m_timerId == 0);
     m_nFrames = m_accFrameTimes = 0;
     m_runEmulation = true;
     m_clocks.start();
-    m_timerId = startTimer(17, Qt::PreciseTimer);
+    if (m_timerId == 0)
+        m_timerId = startTimer(17, Qt::PreciseTimer);
 }
 
 void ScreenWidget::step()
 {
     m_nFrames = m_accFrameTimes = 0;
     m_runEmulation = true;
-    repaint();
+    requestUpdate();
     m_runEmulation = false;
 }
 
-void ScreenWidget::initializeGL()
+void ScreenWidget::initialize()
 {
+#ifdef USE_VULKAN
+    if (m_vkInstance.isValid())
+        return;
+
     try
     {
+        if (!m_vkInstance.create())
+            throw Exception { Exception::IllegalOperation, "failed to create Vulkan instance" };
+
+        setVulkanInstance(&m_vkInstance);
+        auto pBE = static_cast<Backend*>(m_RBE.get());
+        pBE->init(m_vkInstance.vkInstance());
+        pBE->setupOutput(QVulkanInstance::surfaceForWindow(this));
+    }
+    catch (Exception &ex)
+    {
+        QMessageBox::critical(m_pContainer,
+                              tr("GLES init failed"),
+                              tr("Error while initializing GLES: %1").arg(ex.message()));
+    }
+#else
+    if (m_pGLCtx->isValid())
+        return;
+
+    try
+    {
+        if (!m_pGLCtx->create())
+            throw Exception { Exception::IllegalOperation, "failed to create OpenGL context" };
+
+        m_pGLCtx->makeCurrent(this);
+
         const static auto reqFeatures = {
             QOpenGLFunctions::Shaders
         };
 
-        const auto glFuncs = context()->functions();
+        const auto glFuncs = m_pGLCtx->functions();
         const auto feats = glFuncs->openGLFeatures();
         for (auto f: reqFeatures)
             if ((feats & f) == 0)
@@ -81,25 +128,25 @@ void ScreenWidget::initializeGL()
     }
     catch (Exception &ex)
     {
-        QMessageBox::critical(this,
+        QMessageBox::critical(m_pContainer,
                               tr("GLES init failed"),
                               tr("Error while initializing GLES: %1").arg(ex.message()));
     }
+#endif
 }
 
-void ScreenWidget::resizeGL(int w, int h)
+void ScreenWidget::render()
 {
-    static_cast<Backend*>(m_RBE.get())->resize(w, h);
-}
+#ifdef USE_VULKAN
+    if (!m_vkInstance.isValid())
+        return;
+#else
+    if (!m_pGLCtx->isValid())
+        return;
 
-void ScreenWidget::timerEvent(QTimerEvent *event)
-{
-    Q_ASSERT(event->timerId() == m_timerId);
-    repaint();
-}
+    m_pGLCtx->makeCurrent(this);
+#endif
 
-void ScreenWidget::paintGL()
-{
     Q_ASSERT(m_pBus);
     if (m_runEmulation)
     {
@@ -120,8 +167,50 @@ void ScreenWidget::paintGL()
     }
     else if (!m_pBus->getCartrige())
     {
-        const auto g = context()->functions();
-        g->glClearColor(1, 1, 1, 1);
-        g->glClear(GL_COLOR_BUFFER_BIT);
+        m_RBE->drawIdle();
     }
+
+#ifndef USE_VULKAN
+    m_pGLCtx->swapBuffers(this);
+#endif
+}
+
+bool ScreenWidget::event(QEvent *e)
+{
+    bool rv = true;
+    try
+    {
+        switch (e->type())
+        {
+            case QEvent::Expose:
+                if (!isExposed())
+                {
+                    rv = QWindow::event(e);
+                    break;
+                }
+                initialize();
+            case QEvent::UpdateRequest:
+                render();
+                //requestUpdate();
+                break;
+            case QEvent::Resize:
+                static_cast<Backend*>(m_RBE.get())->resize(width(), height());
+                break;
+            case QEvent::Timer:
+                if (static_cast<QTimerEvent*>(e)->timerId() == m_timerId)
+                    requestUpdate();
+                break;
+            default:
+                rv = QWindow::event(e);
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        QMessageBox::critical(m_pContainer,
+                              tr("Emulator window error"),
+                              tr("Error: %1").arg(ex.what()));
+        rv = false;
+    }
+
+    return rv;
 }

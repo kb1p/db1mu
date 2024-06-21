@@ -11,6 +11,17 @@ file(GLOB sources "sources/*.cpp")
 file(GLOB forms "forms/*.ui")
 file(GLOB headers "include/*.h")
 
+if(USE_VULKAN)
+    find_package(Vulkan REQUIRED)
+
+    set(renderer_libs ${Vulkan_LIBRARIES})
+    include_directories(${Vulkan_INCLUDE_DIRS})
+
+    list(APPEND sources "../common/sources/vkrbe.cpp")
+else()
+    set(renderer_libs)
+endif()
+
 qt5_wrap_cpp(mocs ${headers})
 qt5_wrap_ui(uis ${forms})
 
@@ -19,6 +30,10 @@ message("UIs: ${uis}")
 
 add_executable(b1mulator ${sources} ${mocs} ${uis})
 
-target_link_libraries(b1mulator b1-eng Qt5::Widgets Qt5::Multimedia)
+if(USE_VULKAN)
+    add_dependencies(b1mulator compile_shaders)
+endif()
+
+target_link_libraries(b1mulator b1-eng ${renderer_libs} Qt5::Widgets Qt5::Multimedia)
 
 install(TARGETS b1mulator DESTINATION "bin")

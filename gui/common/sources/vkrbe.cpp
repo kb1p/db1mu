@@ -214,12 +214,14 @@ void VulkanRenderingBackend::release()
 #endif
 
     vkDestroyDevice(m_dev, nullptr);
-    vkDestroySurfaceKHR(m_inst, m_surface, nullptr);
     if (m_dbgMsgr != VK_NULL_HANDLE)
         DestroyDebugUtilsMessengerEXT(m_inst, m_dbgMsgr, nullptr);
 
     if (!m_externalInstance)
+    {
+        vkDestroySurfaceKHR(m_inst, m_surface, nullptr);
         vkDestroyInstance(m_inst, nullptr);
+    }
 }
 
 void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
