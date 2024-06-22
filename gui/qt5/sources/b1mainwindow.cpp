@@ -107,7 +107,7 @@ b1MainWindow::b1MainWindow()
     m_ui->setupUi ( this );
 
     m_screen = new ScreenWidget { this };
-    setCentralWidget(m_screen);
+    setCentralWidget(QWidget::createWindowContainer(m_screen, this));
 
     auto &logCfg = Log::instance().config();
     logCfg.pOutput = &std::cout;

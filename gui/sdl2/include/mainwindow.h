@@ -1,8 +1,6 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
-#include "glfuncwrp.h"
-#include "glbe.h"
 #include "sdl_playback_be.h"
 #include <bus.h>
 #include <PPU.h>
@@ -11,6 +9,15 @@
 #include <gamepad.h>
 #include <Cartridge.h>
 #include <SDL2/SDL.h>
+
+#ifdef USE_VULKAN
+    #include <SDL2/SDL_vulkan.h>
+    #include "vkrbe.h"
+#else
+    #include "glfuncwrp.h"
+    #include "glbe.h"
+#endif
+
 #include <string>
 
 class MainWindow
@@ -31,8 +38,13 @@ class MainWindow
     Cartrige m_cartridge;
     Gamepad m_padLeft,
             m_padRight;
+#ifdef USE_VULKAN
+    VulkanRenderingBackend m_RBE;
+#else
+    SDL_GLContext m_glCtx = { };
     GLFunctionsWrapper m_glFuncWrp;
     GLRenderingBackend<GLFunctionsWrapper> m_RBE;
+#endif
     SDLPlaybackBackend m_audioBE;
     bool m_isPaused = false,
          m_doStep = false;
@@ -68,7 +80,12 @@ class MainWindow
 #endif
 
 public:
+#ifdef USE_VULKAN
+    MainWindow(SDL_Window *win);
+#else
     MainWindow(SDL_Window *win, SDL_GLContext glCtx);
+#endif
+
     ~MainWindow();
     void initialize();
     void loadROM(const char *romFileName);

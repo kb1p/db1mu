@@ -3,11 +3,25 @@
 
 #include "storage.h"
 
-/// Interface that must be implemented using a concrete rendering system (e.g. Open GL ES)
+/// Abstract class that must be implemented using a concrete rendering system (e.g. Open GL ES)
 class RenderingBackend
 {
 protected:
-    RenderingBackend() = default;
+    static constexpr int TEX_WIDTH = 256,
+                         TEX_HEIGHT = 240;
+
+    // NES to RGB
+    static const uint32_t s_palette[64];
+
+    RenderingBackend();
+
+    // Helper function to set line to a RGBA buffer using default settings.
+    // Make sure the buffer has enough space.
+    static void setLineToBuf_RGBA8(uint8_t *dst,
+                                   const int n,
+                                   const c6502_byte_t *pColorData,
+                                   const c6502_byte_t bgColor) noexcept;
+    static void fillWhiteNoise_RGBA8(uint8_t *dst) noexcept;
 
 public:
     RenderingBackend(const RenderingBackend&) = delete;
@@ -19,9 +33,10 @@ public:
     virtual ~RenderingBackend() = default;
 
     virtual void setLine(const int n,
-                            const c6502_byte_t *pColorData,
-                            const c6502_byte_t bgColor) = 0;
+                         const c6502_byte_t *pColorData,
+                         const c6502_byte_t bgColor) = 0;
     virtual void draw() = 0;
+    virtual void drawIdle() = 0;
 };
 
 class PPU: public Component

@@ -105,14 +105,14 @@ class Maybe
     bool m_isNothing = true;
 
 public:
-    Maybe() = default;
-    Maybe(T &&v):
+    Maybe() noexcept = default;
+    Maybe(T &&v) noexcept:
         m_data { std::forward<T>(v) },
         m_isNothing { false }
     {
     }
-    Maybe(const Maybe&) = default;
-    Maybe(Maybe&&) = default;
+    Maybe(const Maybe&) noexcept = default;
+    Maybe(Maybe&&) noexcept = default;
 
     Maybe &operator=(const Maybe &m) noexcept
     {
@@ -132,10 +132,10 @@ public:
         return *this;
     }
 
-    Maybe &operator=(T &&v) noexcept
+    Maybe &operator=(T v) noexcept
     {
         m_isNothing = false;
-        m_data = std::forward<T>(v);
+        m_data = std::move(v);
 
         return *this;
     }
@@ -169,14 +169,16 @@ public:
         m_isNothing = true;
     }
 
-    operator bool() const noexcept
+    bool operator==(const Maybe &x) const noexcept
     {
-        return !m_isNothing;
+        return m_isNothing && x.m_isNothing ? true :
+               !m_isNothing && !x.m_isNothing ? m_data == x.m_data :
+               false;
     }
 
-    operator const T&() const
+    bool operator!=(const Maybe &x) const noexcept
     {
-        return value();
+        return !(*this == x);
     }
 };
 

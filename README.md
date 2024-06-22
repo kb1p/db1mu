@@ -8,6 +8,7 @@ This is a NES emulator project that is aimed to be highly portable. The final go
 * CPU, PPU, gamepad modules.
 * Default mapper which supports 1-2 16kb ROM banks and 1 8kb VROM bank.
 * Frontends: Qt5, SDL2 (with optional [ImGui Addons](https://github.com/Flix01/imgui) interface).
+* Backends (rendering): OpenGL ES 2.0, Vulkan
 
 ## To do
 * Extend the set of supported mappers.
@@ -19,12 +20,13 @@ This is a NES emulator project that is aimed to be highly portable. The final go
 * CMake 3.1 or higher.
 * Flex / Bison (for debugger).
 * For frontend: [Qt5](https://www.qt.io/download) or [SDL2](https://libsdl.org/download-2.0.php).
-* GLES 2.0 emulator for desktop platforms ([ARM Mali GLES emulator](https://developer.arm.com/tools-and-software/graphics-and-gaming/opengl-es-emulator/downloads) or [ANGLE](https://github.com/google/angle)).
+* For OpenGL ES 2.0 rendering: emulator for desktop platforms ([ARM Mali GLES emulator](https://developer.arm.com/tools-and-software/graphics-and-gaming/opengl-es-emulator/downloads) or [ANGLE](https://github.com/google/angle)).
+* For Vulkan: Vulkan SDK, glslValidator
 
 ### Qt5 frontend
 #### Install required Qt5 components
 ```bash
-$ sudo apt install qt5-default qtmultimedia5-dev libqt5multimedia5-plugins
+$ sudo apt install qt5-default qtmultimedia5-dev libqt5multimedia5-plugins 
 ```
 
 #### Build the emulator itself
@@ -87,8 +89,22 @@ If UI is not used, there is no way to pick ROM file interactively, so a path to 
 
 #### Running emulator with SDL frontend
 Command line options can be specified in any order. The following command line options are available:
-
 Option             | Effect
 -------------------|---------
 `--fullscreen`     | Run in fullscreen mode (if not specified, run in windowed mode)
 `path/to/rom.file` | Load and run iNES ROM file immediatelly at startup (mandatory if UI is not used).
+
+### Switching to Vulkan renderer
+By default, GLES renderer is used. To use Vulkan renderer (for either Qt and SDL frontend) follow below steps:
+
+- Make sure to install **Vulkan SDK** and **glslangValidator** to compile GLSL to SPIR-V:  
+  ```bash
+  $ sudo apt install libvulkan-dev vulkan-validationlayers-dev mesa-vulkan-drivers vulkan-tools glslang-tools
+  ```
+- Add `RENDERER_TYPE=Vulkan` to cmake configuration line like in example below:  
+  ```bash
+  $ cmake -DCMAKE_BUILD_TYPE=Debug -DRENDERER_TYPE=Vulkan ..
+  $ cmake --build . --config debug
+  ```
+
+Please note that **Vulkan validation layers** are enabled in debug build configurations, in release configurations they are disabled. Validation layer output is printed to db1mu log system for SDL2, to default Qt's debug output for Qt5.
