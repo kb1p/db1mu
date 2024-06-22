@@ -144,25 +144,45 @@ void VulkanRenderingBackend::init(uint32_t nExts, const char **pExts)
         this
     };
 
-    const VkInstanceCreateInfo instanceCreateInfo = {
-        VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        g_debug ? &dbgCreateInfo : nullptr,
-        0,
-        &appInfo,
-        g_debug ? VALIDATION_LAYERS_COUNT : 0u,
-        g_debug ? VALIDATION_LAYERS : nullptr,
-        nExts,
-        pExts
-    };
-
-    CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &m_inst),
-          "failed to create vulkan instance");
+    VkInstanceCreateInfo instCreatInf = { };
+    instCreatInf.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instCreatInf.pNext = nullptr;
+    instCreatInf.pApplicationInfo = &appInfo;
+    instCreatInf.enabledLayerCount = 0;
+    instCreatInf.ppEnabledLayerNames = nullptr;
+    instCreatInf.enabledExtensionCount = nExts;
+    instCreatInf.ppEnabledExtensionNames = pExts;
 
     if (g_debug)
     {
-        CHECK(CreateDebugUtilsMessengerEXT(m_inst, &dbgCreateInfo, nullptr, &m_dbgMsgr),
-              "failed to create debug messenger");
+        instCreatInf.pNext = &dbgCreateInfo;
+        instCreatInf.enabledLayerCount = VALIDATION_LAYERS_COUNT;
+        instCreatInf.ppEnabledLayerNames = VALIDATION_LAYERS;
     }
+
+    auto rv = vkCreateInstance(&instCreatInf, nullptr, &m_inst);
+
+    if (g_debug)
+    {
+        if (rv == VK_SUCCESS)
+        {
+            CHECK(CreateDebugUtilsMessengerEXT(m_inst, &dbgCreateInfo, nullptr, &m_dbgMsgr),
+                  "failed to create debug messenger");
+        }
+        else if (rv == VK_ERROR_LAYER_NOT_PRESENT)
+        {
+            Log::w("[Vulkan] Validation layer is not supported; validation is disabled");
+
+            // Try to create instance without validation layers
+            instCreatInf.pNext = nullptr;
+            instCreatInf.enabledLayerCount = 0;
+            instCreatInf.ppEnabledLayerNames = nullptr;
+
+            rv = vkCreateInstance(&instCreatInf, nullptr, &m_inst);
+        }
+    }
+
+    CHECK(rv, "failed to create Vulkan instance");
 
     m_externalInstance = false;
 }
