@@ -54,7 +54,8 @@ MainWindow::~MainWindow()
         ImGui_ImplOpenGL3_Shutdown();
     #endif
     ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
+    if (ImGui::GetCurrentContext())
+        ImGui::DestroyContext();
 #endif
 }
 

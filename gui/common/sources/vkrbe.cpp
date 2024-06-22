@@ -223,7 +223,8 @@ void VulkanRenderingBackend::release()
 
     if (!m_externalInstance)
     {
-        vkDestroySurfaceKHR(m_inst, m_surface, nullptr);
+        if (m_surface != VK_NULL_HANDLE)
+            vkDestroySurfaceKHR(m_inst, m_surface, nullptr);
         vkDestroyInstance(m_inst, nullptr);
     }
 }
