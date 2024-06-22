@@ -73,13 +73,11 @@ class VulkanRenderingBackend final: public RenderingBackend
     VkExtent2D m_surfExtent;
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     std::vector<SwapchainData> m_swapChainData;
-    uint32_t m_imageCount = 0;
+    std::vector<VkCommandBuffer> m_cmdBufs;
+    std::vector<VkDescriptorSet> m_ufmDescSets;
 
     // Per-frame data
-    static constexpr int MAX_FIF = 3;
-    VkCommandBuffer m_cmdBufs[MAX_FIF];
-    VkDescriptorSet m_ufmDescSets[MAX_FIF];
-    void *m_ufmBufsMapping[MAX_FIF];
+    static constexpr int MAX_FIF = 2;
     VkSemaphore m_semsRenderFinished[MAX_FIF],
                 m_semsImageAvailable[MAX_FIF];
     VkFence m_fncsInFlight[MAX_FIF];
@@ -229,7 +227,7 @@ public:
 
     uint32_t swcImageCount() const noexcept
     {
-        return m_imageCount;
+        return m_swapChainData.size();
     }
 };
 

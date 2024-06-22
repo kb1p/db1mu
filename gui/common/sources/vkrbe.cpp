@@ -188,32 +188,36 @@ void VulkanRenderingBackend::destroySwapchain()
 
 void VulkanRenderingBackend::release()
 {
-    CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle at shutdown");
-
-    for (int i = 0; i < MAX_FIF; i++)
+    if (m_dev != VK_NULL_HANDLE)
     {
-        vkDestroySemaphore(m_dev, m_semsImageAvailable[i], nullptr);
-        vkDestroySemaphore(m_dev, m_semsRenderFinished[i], nullptr);
-        vkDestroyFence(m_dev, m_fncsInFlight[i], nullptr);
-    }
-    destroySwapchain();
-    m_texture.dispose(m_dev);
-    m_texStgBuf.dispose(m_dev);
-    vkDestroyCommandPool(m_dev, m_cmdTmpPool, nullptr);
-    vkDestroyCommandPool(m_dev, m_cmdPool, nullptr);
-    vkDestroyPipeline(m_dev, m_pipeline, nullptr);
-    vkDestroyPipelineLayout(m_dev, m_pipelineLayout, nullptr);
-    vkDestroyDescriptorPool(m_dev, m_descPool, nullptr);
-    vkDestroyDescriptorSetLayout(m_dev, m_descrSetLayout, nullptr);
-    vkDestroyRenderPass(m_dev, m_renderPass, nullptr);
+        CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle at shutdown");
+
+        for (int i = 0; i < MAX_FIF; i++)
+        {
+            vkDestroySemaphore(m_dev, m_semsImageAvailable[i], nullptr);
+            vkDestroySemaphore(m_dev, m_semsRenderFinished[i], nullptr);
+            vkDestroyFence(m_dev, m_fncsInFlight[i], nullptr);
+        }
+        destroySwapchain();
+        m_texture.dispose(m_dev);
+        m_texStgBuf.dispose(m_dev);
+        vkDestroyCommandPool(m_dev, m_cmdTmpPool, nullptr);
+        vkDestroyCommandPool(m_dev, m_cmdPool, nullptr);
+        vkDestroyPipeline(m_dev, m_pipeline, nullptr);
+        vkDestroyPipelineLayout(m_dev, m_pipelineLayout, nullptr);
+        vkDestroyDescriptorPool(m_dev, m_descPool, nullptr);
+        vkDestroyDescriptorSetLayout(m_dev, m_descrSetLayout, nullptr);
+        vkDestroyRenderPass(m_dev, m_renderPass, nullptr);
 
 #ifdef USE_IMGUI
-    vkDestroyCommandPool(m_dev, m_cmdPoolIG, nullptr);
-    vkDestroyDescriptorPool(m_dev, m_descPoolIG, nullptr);
-    vkDestroyRenderPass(m_dev, m_renderPassIG, nullptr);
+        vkDestroyCommandPool(m_dev, m_cmdPoolIG, nullptr);
+        vkDestroyDescriptorPool(m_dev, m_descPoolIG, nullptr);
+        vkDestroyRenderPass(m_dev, m_renderPassIG, nullptr);
 #endif
 
-    vkDestroyDevice(m_dev, nullptr);
+        vkDestroyDevice(m_dev, nullptr);
+    }
+
     if (m_dbgMsgr != VK_NULL_HANDLE)
         DestroyDebugUtilsMessengerEXT(m_inst, m_dbgMsgr, nullptr);
 
@@ -729,17 +733,6 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
     CHECK(vkCreateCommandPool(m_dev, &cmdPoolTmpInfo, nullptr, &m_cmdTmpPool),
           "failed to create command pool for transient buffers");
 
-    // Allocate command buffers
-    const VkCommandBufferAllocateInfo cmdBufInfo = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        nullptr,
-        m_cmdPool,
-        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        MAX_FIF
-    };
-    CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufInfo, m_cmdBufs),
-          "failed to allocate command buffers");
-
 #ifdef USE_IMGUI
     // Command pool for ImGUI and allocate render command buffers from it
     const VkCommandPoolCreateInfo cmdPoolIGInfo = {
@@ -761,25 +754,6 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
     CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufIGInfo, m_cmdBufsIG),
           "[ImGUI] failed to allocate command buffers");
 #endif
-
-    // Create descriptor set pool
-    const VkDescriptorPoolSize dsPoolSizes[] = {
-        {
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            MAX_FIF
-        }
-    };
-    constexpr auto numPoolSizes = sizeof(dsPoolSizes) / sizeof(VkDescriptorPoolSize);
-    const VkDescriptorPoolCreateInfo dsPoolInf = {
-        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        nullptr,
-        0,
-        MAX_FIF, // max sets
-        numPoolSizes,
-        dsPoolSizes
-    };
-    CHECK(vkCreateDescriptorPool(m_dev, &dsPoolInf, nullptr, &m_descPool),
-          "failed to create descriptor pool for emulator");
 
 #ifdef USE_IMGUI
     const VkDescriptorPoolSize dsPoolSizesIG[] = {
@@ -808,21 +782,6 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
           "failed to create secodary descriptor pool for ImGUI");
 #endif
 
-    // Allocate descriptor sets
-    VkDescriptorSetLayout dsLayouts[MAX_FIF];
-    for (int i = 0; i < MAX_FIF; i++)
-        dsLayouts[i] = m_descrSetLayout;
-
-    const VkDescriptorSetAllocateInfo dsAllocInfo = {
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        nullptr,
-        m_descPool,
-        MAX_FIF,    // descriptor set count
-        dsLayouts
-    };
-    CHECK(vkAllocateDescriptorSets(m_dev, &dsAllocInfo, m_ufmDescSets),
-          "failed to allocate descriptor sets");
-
     // Create synchronization objects
     const VkSemaphoreCreateInfo semInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
@@ -846,28 +805,6 @@ void VulkanRenderingBackend::setupOutput(VkSurfaceKHR surf)
         const auto r3 =  vkCreateFence(m_dev, &fncInfo, nullptr, &m_fncsInFlight[i]);
         if (r1 != VK_SUCCESS || r2 != VK_SUCCESS || r3 != VK_SUCCESS)
             throw runtime_error { "failed to create per-frame synchronization primitives" };
-
-        // Bind uniforms to pipeline
-        const VkDescriptorImageInfo texInfo = {
-            m_texture.sampler,
-            m_texture.view,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        const VkWriteDescriptorSet writeInfos[] = {
-            {
-                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                nullptr,
-                m_ufmDescSets[i],
-                0,
-                0,
-                1,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                &texInfo,                           // ptr to image info
-                nullptr,
-                nullptr
-            }
-        };
-        vkUpdateDescriptorSets(m_dev, sizeof(writeInfos) / sizeof(VkWriteDescriptorSet), writeInfos, 0, nullptr);
     }
 
     createSwapchain();
@@ -1221,12 +1158,9 @@ void VulkanRenderingBackend::createSwapchain()
     Log::d("[Vulkan] Surface extent: %dx%d", m_surfExtent.width, m_surfExtent.height);
 
     // Pick number of images in a swap chain
-    m_imageCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
-                   m_surfaceCaps.maxImageCount :
-                   m_surfaceCaps.minImageCount + 1;
-    m_imageCount = std::min<uint32_t>(m_imageCount, MAX_FIF);
-
-    Log::d("[Vulkan] Number of images in a swap chain: %d", m_imageCount);
+    const auto minImgCount = m_surfaceCaps.maxImageCount > 0 && m_surfaceCaps.maxImageCount == m_surfaceCaps.minImageCount ?
+                             m_surfaceCaps.maxImageCount :
+                             m_surfaceCaps.minImageCount + 1;
 
     const bool separatePresQueue = m_qfIndexGraphical != m_qfIndexPresentation;
     const uint32_t queueIndices[] = { m_qfIndexGraphical, m_qfIndexPresentation };
@@ -1235,7 +1169,7 @@ void VulkanRenderingBackend::createSwapchain()
         nullptr,
         0,
         m_surface,
-        m_imageCount,
+        minImgCount,                // Minimum image count
         m_surfaceFormat.format,
         m_surfaceFormat.colorSpace,
         m_surfExtent,
@@ -1254,17 +1188,83 @@ void VulkanRenderingBackend::createSwapchain()
           "failed to create swap chain");
 
     // Retrieve swapchain images
+    uint32_t imageCount = 0;
     std::vector<VkImage> swapChainImages;
-    uint32_t imgCount = 0;
-    CHECK(vkGetSwapchainImagesKHR(m_dev, m_swapChain, &imgCount, nullptr),
+    CHECK(vkGetSwapchainImagesKHR(m_dev, m_swapChain, &imageCount, nullptr),
           "failed to get image count from swap chain");
-    swapChainImages.resize(imgCount);
-    CHECK(vkGetSwapchainImagesKHR(m_dev, m_swapChain, &imgCount, swapChainImages.data()),
+    swapChainImages.resize(imageCount);
+    CHECK(vkGetSwapchainImagesKHR(m_dev, m_swapChain, &imageCount, swapChainImages.data()),
           "failed to enumerate image count from swap chain");
 
-    // Create image views & framebuffers for each of swapchain images
-    m_swapChainData.resize(imgCount);
-    for (uint32_t i = 0; i < imgCount; i++)
+    Log::d("[Vulkan] Number of images in a swap chain: %d", imageCount);
+
+    // Check if we need to create more descriptor sets and command buffers
+    if (m_ufmDescSets.size() < imageCount)
+    {
+        // No need to free each descriptor set manually, destroying pool will do it implicitly.
+        vkDestroyDescriptorPool(m_dev, m_descPool, nullptr);
+
+        // Create descriptor set pool
+        const VkDescriptorPoolSize dsPoolSizes[] = {
+            {
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                imageCount
+            }
+        };
+        constexpr auto numPoolSizes = sizeof(dsPoolSizes) / sizeof(VkDescriptorPoolSize);
+        const VkDescriptorPoolCreateInfo dsPoolInf = {
+            VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            nullptr,
+            0,
+            static_cast<uint32_t>(imageCount * numPoolSizes), // max sets
+            numPoolSizes,
+            dsPoolSizes
+        };
+        CHECK(vkCreateDescriptorPool(m_dev, &dsPoolInf, nullptr, &m_descPool),
+            "failed to create descriptor pool for emulator");
+
+        // Allocate descriptor sets
+        m_ufmDescSets.resize(imageCount);
+        std::vector<VkDescriptorSetLayout> dsLayouts(imageCount);
+        std::fill(dsLayouts.begin(), dsLayouts.end(), m_descrSetLayout);
+
+        const VkDescriptorSetAllocateInfo dsAllocInfo = {
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            nullptr,
+            m_descPool,
+            imageCount,    // descriptor set count
+            dsLayouts.data()
+        };
+        CHECK(vkAllocateDescriptorSets(m_dev, &dsAllocInfo, m_ufmDescSets.data()),
+              "failed to allocate descriptor sets");
+    }
+    if (m_cmdBufs.size() < imageCount)
+    {
+        if (m_cmdBufs.size() > 0)
+            vkFreeCommandBuffers(m_dev, m_cmdPool, m_cmdBufs.size(), m_cmdBufs.data());
+
+        m_cmdBufs.resize(imageCount);
+
+        // Allocate command buffers
+        const VkCommandBufferAllocateInfo cmdBufInfo = {
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            nullptr,
+            m_cmdPool,
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            imageCount
+        };
+        CHECK(vkAllocateCommandBuffers(m_dev, &cmdBufInfo, m_cmdBufs.data()),
+            "failed to allocate command buffers");
+    }
+
+    // Create image views & framebuffers & bind uniforms for each of swapchain images
+    const VkDescriptorImageInfo texUfmInfo = {
+        m_texture.sampler,
+        m_texture.view,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+    m_swapChainData.resize(imageCount);
+    for (uint32_t i = 0; i < imageCount; i++)
     {
         auto &r = m_swapChainData[i];
 
@@ -1303,6 +1303,23 @@ void VulkanRenderingBackend::createSwapchain()
         CHECK(vkCreateFramebuffer(m_dev, &fbIGInf, nullptr, &r.fbIG),
               "[ImGUI] failed to create FBO for one of swapchain images");
 #endif
+
+        // Bind uniforms to pipeline
+        const VkWriteDescriptorSet writeInfos[] = {
+            {
+                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                nullptr,
+                m_ufmDescSets[i],
+                0,
+                0,
+                1,
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                &texUfmInfo,                           // ptr to image info
+                nullptr,
+                nullptr
+            }
+        };
+        vkUpdateDescriptorSets(m_dev, sizeof(writeInfos) / sizeof(VkWriteDescriptorSet), writeInfos, 0, nullptr);
 
         // Fill the command buffer for emulator rendering
         prepareTextureRenderingCmdBuf(i);
@@ -1468,7 +1485,7 @@ void VulkanRenderingBackend::draw()
 
     // Command buffer containing NES texture rendering commands is already prepared at this point.
 #ifdef USE_IMGUI
-    auto cmdBufIG = m_cmdBufsIG[imageIndex];
+    auto cmdBufIG = m_cmdBufsIG[m_curFrame];
 
     CHECK(vkResetCommandBuffer(cmdBufIG, 0),
           "[ImGUI] failed to reset command buffer");
@@ -1528,7 +1545,8 @@ void VulkanRenderingBackend::drawIdle()
 
 void VulkanRenderingBackend::waitDeviceIdle()
 {
-    CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle (external request)");
+    if (m_dev != VK_NULL_HANDLE)
+        CHECK(vkDeviceWaitIdle(m_dev), "failed to wait device idle (external request)");
 }
 
 #ifdef USE_IMGUI
