@@ -33,10 +33,6 @@ ScreenWidget::ScreenWidget(QWidget *container):
     QSurfaceFormat fmt;
     fmt.setRenderableType(QSurfaceFormat::OpenGLES);
     fmt.setVersion(2, 0);
-    fmt.setRedBufferSize(2);
-    fmt.setGreenBufferSize(2);
-    fmt.setBlueBufferSize(2);
-    fmt.setAlphaBufferSize(1);
 
     setFormat(fmt);
     //setUpdateBehavior(QOpenGLWidget::PartialUpdate);
