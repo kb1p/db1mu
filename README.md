@@ -4,6 +4,17 @@ A cross-platform NES emulator.
 ## Description
 This is a NES emulator project that is aimed to be highly portable. The final goal is to be able to launch it on smart TV platforms. The emulation core is written completely in stadard C++; for communication with the platform-specific functions (rendering, sound), the core provides interfaces that must be implemented by frontends. Currently 2 frontends implemented: Qt5 and SDL.
 
+## Screenshots
+
+- SDL2 backend, Vulkan renderer, ImGUI UI  
+    ![s1](screenshots/screen01.png)
+
+- SDL2 backend, Vulkan renderer, no UI  
+    ![s2](screenshots/screen02.png)
+
+- Qt5.15 backend, Vulkan renderer  
+    ![s3](screenshots/screen04.png)
+
 ## What's already done
 * CPU, PPU, gamepad modules.
 * Default mapper which supports 1-2 16kb ROM banks and 1 8kb VROM bank.
